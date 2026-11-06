@@ -191,17 +191,31 @@
         <!-- Right Column Gacha Machine Area -->
         <section class="flex flex-col items-center justify-center h-full">
             <div class="w-full max-w-[320px] h-[480px] bg-gradient-to-b from-[#d97706] via-[#b45309] to-[#78350f] rounded-[42px] p-5 border-2 border-amber-400/80 flex flex-col items-center justify-between shadow-2xl relative overflow-hidden">
-                <div class="w-60 h-60 rounded-full bg-[#120919] border-4 border-[#2d1b3d] flex items-center justify-center relative my-auto shadow-inner overflow-hidden">
-                    <div class="absolute w-44 h-44 border border-purple-500/30 flex items-center justify-center animate-spin-seal">
-                        <div class="w-32 h-32 border border-amber-500/30 rotate-45"></div>
+                
+                <!-- 豪華な多重回転魔法陣エリア -->
+                <div class="w-60 h-60 rounded-full bg-[#0d0515] border-4 border-amber-500/50 flex items-center justify-center relative my-auto shadow-[0_0_30px_rgba(245,158,11,0.4)] overflow-hidden">
+                    
+                    <!-- 背景の怪しい紫の輝き -->
+                    <div class="absolute inset-0 bg-radial from-purple-900/40 via-amber-950/20 to-transparent"></div>
+
+                    <!-- 外枠・ルーン魔法陣（時計回り回転） -->
+                    <div class="absolute w-56 h-56 rounded-full border-2 border-dashed border-amber-400/40 animate-spin-seal"></div>
+
+                    <!-- 中枠・幾何学星型魔法陣（反時計回り回転） -->
+                    <div class="absolute w-44 h-44 border-2 border-purple-400/50 flex items-center justify-center" style="animation: spin-seal 18s linear infinite reverse;">
+                        <div class="w-32 h-32 border-2 border-amber-300/60 rotate-45"></div>
+                        <div class="absolute w-32 h-32 border-2 border-rose-400/50 -rotate-45"></div>
                     </div>
-                    <div class="absolute w-52 h-52 rounded-full border border-purple-400/20"></div>
+
+                    <!-- 内枠・光輪リング -->
+                    <div class="absolute w-50 h-50 rounded-full border border-yellow-300/30 animate-pulse"></div>
+                    <div class="absolute w-28 h-28 rounded-full border-4 border-amber-400/60 shadow-[0_0_15px_rgba(251,191,36,0.8)]"></div>
 
                     <!-- Glowing Spheres with Icons -->
                     <div class="flex items-center gap-3 z-10">
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-rose-400 via-rose-600 to-rose-900 shadow-[0_0_15px_rgba(244,63,94,0.8)] border border-rose-300 flex items-center justify-center text-lg">🗡️</div>
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-cyan-300 via-blue-600 to-blue-900 shadow-[0_0_15px_rgba(59,130,246,0.8)] border border-cyan-200 flex items-center justify-center text-lg">🛡️</div>
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-purple-300 via-purple-600 to-purple-900 shadow-[0_0_15px_rgba(168,85,247,0.8)] border border-purple-200 flex items-center justify-center text-lg">👑</div>
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-rose-400 via-rose-600 to-rose-900 shadow-[0_0_20px_rgba(244,63,94,1)] border-2 border-rose-200 flex items-center justify-center text-lg animate-bounce">🗡️</div>
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-cyan-300 via-blue-600 to-blue-900 shadow-[0_0_20px_rgba(59,130,246,1)] border-2 border-cyan-100 flex items-center justify-center text-lg animate-pulse">🛡️</div>
+                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-purple-300 via-purple-600 to-purple-900 shadow-[0_0_20px_rgba(168,85,247,1)] border-2 border-purple-200 flex items-center justify-center text-lg animate-bounce" style="animation-delay: 0.2s;">👑</div>
                     </div>
                 </div>
 
@@ -323,21 +337,29 @@
             </div>
 
             <div id="threejs-canvas-holder" class="w-full h-[360px] md:h-[400px] bg-black rounded-xl relative overflow-hidden border border-amber-500/30">
-                <div class="absolute top-3 left-3 bg-rose-950/80 border border-rose-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-rose-200 z-10 flex items-center gap-1.5 shadow">
-                    <span>😈 魔王HP:</span>
-                    <span id="boss-hp" class="text-rose-400 text-xs font-black">10000</span>
+                <div class="absolute top-3 left-3 flex flex-col gap-1 z-10">
+                    <div class="bg-blue-950/80 border border-blue-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-blue-200 shadow">
+                        <span>❤️ 勇者HP:</span>
+                        <span id="player-hp" class="text-cyan-300 text-xs font-black">1000</span>
+                    </div>
+                    <div class="bg-rose-950/80 border border-rose-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-rose-200 shadow">
+                        <span>😈 魔王HP:</span>
+                        <span id="boss-hp" class="text-rose-400 text-xs font-black">10000</span>
+                    </div>
                 </div>
                 <div class="absolute top-3 right-3 bg-cyan-950/80 border border-cyan-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-cyan-200 z-10 flex items-center gap-1.5 shadow">
-                    <span>🖱️ 右クリックドラッグ: 360度視点</span>
+                    <span>🖱️ 右クリック: 視点 | [Space]: ジャンプ回避</span>
                 </div>
 
-                <div id="joystick-zone" class="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-white/10 border border-white/20 z-10 flex items-center justify-center touch-none">
-                    <div id="joystick-knob" class="w-10 h-10 rounded-full bg-amber-400/80 border border-white shadow"></div>
-                </div>
+                <!-- Jump Button (Touch & Mouse UI) -->
+                <button id="jump-btn" onclick="triggerJump()" class="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 font-black border-2 border-white/80 shadow-2xl z-10 flex flex-col items-center justify-center active:scale-90 transition transform">
+                    <span class="text-lg">🦘</span>
+                    <span class="text-[9px] leading-tight">JUMP</span>
+                </button>
             </div>
 
             <div class="flex items-center justify-between gap-2 mt-1">
-                <p class="text-[11px] text-gray-400 font-medium">【操作】[WASD] / 方向キー / 画面左下ドラッグで移動</p>
+                <p class="text-[11px] text-gray-400 font-medium">【操作】[WASD] 移動 / [Space] ジャンプ / 右クリック 視点操作</p>
                 <button onclick="close3DWorld()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow">
                     冒険を中断して戻る
                 </button>
@@ -362,14 +384,22 @@
         };
 
         const weaponDatabase = [
+            { id: 'w_omni', name: '全次元創世の神剣', atk: 12000, rarity: 'GOD', icon: '🌌', color: 'text-rose-300', desc: 'すべての世界を創造し破壊する究極の神器' },
             { id: 'w_god', name: '神威・天叢雲剣', atk: 5000, rarity: 'GOD', icon: '⚡', color: 'text-rose-400', desc: '神の雷を纏いし伝説の一閃' },
             { id: 'w_god_shield', name: 'イージスの神盾', atk: 3500, rarity: 'GOD', icon: '🛡️', color: 'text-yellow-300', desc: 'あらゆる攻撃を無効化する神の盾' },
+            { id: 'w_god_dragon', name: '竜神の覇王剣', atk: 7800, rarity: 'GOD', icon: '🐲', color: 'text-amber-300', desc: '古代竜の魂が宿る最強の破壊剣' },
+            { id: 'w_god_orbit', name: '天球儀の聖杖', atk: 6200, rarity: 'GOD', icon: '🪐', color: 'text-purple-300', desc: '星々の軌道を操る宇宙の魔杖' },
             { id: 'w_hero', name: '伝説の勇者ロトの剣', atk: 1200, rarity: 'UR', icon: '👑', color: 'text-amber-300', desc: '世界を救いし勇者の聖剣' },
             { id: 'w_ur_bow', name: 'アルテミスの神弓', atk: 950, rarity: 'UR', icon: '🏹', color: 'text-cyan-300', desc: '光の矢で悪を射抜く精霊の弓' },
+            { id: 'w_ur_scythe', name: '死神の魔鎌', atk: 1100, rarity: 'UR', icon: '🖤', color: 'text-purple-300', desc: '魂を刈り取る闇の鎌' },
+            { id: 'w_ur_valkyrie', name: 'ヴァルキリーランス', atk: 1350, rarity: 'UR', icon: '🔱', color: 'text-rose-300', desc: '天界の女戦士が愛用した神槍' },
             { id: 'w_gold', name: '黄金の大剣', atk: 450, rarity: 'SSR', icon: '🔱', color: 'text-yellow-400', desc: '眩く輝く黄金の大剣' },
             { id: 'w_ssr_staff', name: '賢者の杖', atk: 380, rarity: 'SSR', icon: '🪄', color: 'text-purple-300', desc: '大魔法を操る高貴な杖' },
+            { id: 'w_ssr_katana', name: '妖刀・村正', atk: 420, rarity: 'SSR', icon: '🗡️', color: 'text-rose-400', desc: '血を吸うごとに切れ味が増す魔刀' },
+            { id: 'w_ssr_hammer', name: 'タイタンの戦槌', atk: 490, rarity: 'SSR', icon: '🔨', color: 'text-amber-400', desc: '大地を揺るがす巨人族のハンマー' },
             { id: 'w_silver', name: '銀のレイピア', atk: 180, rarity: 'SR', icon: '🗡️', color: 'text-purple-400', desc: 'しなやかで鋭い銀の細身剣' },
             { id: 'w_sr_axe', name: 'バトルアックス', atk: 150, rarity: 'SR', icon: '🪓', color: 'text-amber-500', desc: '重厚で強力な戦斧' },
+            { id: 'w_sr_dagger', name: 'アサシンダガー', atk: 165, rarity: 'SR', icon: '🗡️', color: 'text-indigo-400', desc: '影に紛れて敵を急襲する暗殺用短剣' },
             { id: 'w_iron', name: '鉄の長剣', atk: 80, rarity: 'R', icon: '⚔️', color: 'text-blue-400', desc: '鍛冶屋特製の丈夫な鉄剣' },
             { id: 'w_r_spear', name: '騎士の槍', atk: 65, rarity: 'R', icon: '🔱', color: 'text-cyan-400', desc: '突進力に優れた細身の槍' },
             { id: 'w_bronze', name: '銅の剣', atk: 35, rarity: 'N', icon: '🗡️', color: 'text-gray-300', desc: '冒険者が最初に手にする剣' },
@@ -377,7 +407,7 @@
         ];
 
         function checkTwoHourReset() {
-            const TWO_HOURS = 2 * 60 * 60 * 1000; // 2時間 (7,200,000ミリ秒)
+            const TWO_HOURS = 2 * 60 * 60 * 1000;
             const now = Date.now();
             if (!gameState.lastResetTime) {
                 gameState.lastResetTime = now;
@@ -385,7 +415,7 @@
             const elapsed = now - gameState.lastResetTime;
 
             if (elapsed >= TWO_HOURS) {
-                gameState.sessionPulls = 0; // 召喚制限カウントを0にリセット
+                gameState.sessionPulls = 0;
                 gameState.lastResetTime = now;
                 saveState();
             }
@@ -453,18 +483,21 @@
                 const rand = Math.random() * 100;
                 let item = null;
 
-                if (rand < 0.5) item = weaponDatabase[0]; // 天叢雲剣
-                else if (rand < 1.0) item = weaponDatabase[1]; // イージスの神盾
-                else if (rand < 3.0) item = weaponDatabase[2]; // ロトの剣
-                else if (rand < 5.0) item = weaponDatabase[3]; // アルテミスの神弓
-                else if (rand < 10.0) item = weaponDatabase[4]; // 黄金の大剣
-                else if (rand < 15.0) item = weaponDatabase[5]; // 賢者の杖
-                else if (rand < 25.0) item = weaponDatabase[6]; // 銀のレイピア
-                else if (rand < 35.0) item = weaponDatabase[7]; // バトルアックス
-                else if (rand < 50.0) item = weaponDatabase[8]; // 鉄の長剣
-                else if (rand < 65.0) item = weaponDatabase[9]; // 騎士の槍
-                else if (rand < 80.0) item = weaponDatabase[10]; // 銅の剣
-                else if (rand < 90.0) item = weaponDatabase[11]; // 木彫りの短剣
+                if (rand < 0.2) item = weaponDatabase[0];
+                else if (rand < 0.8) item = weaponDatabase[1];
+                else if (rand < 1.5) item = weaponDatabase[2];
+                else if (rand < 3.0) item = weaponDatabase[3];
+                else if (rand < 5.0) item = weaponDatabase[4];
+                else if (rand < 7.0) item = weaponDatabase[5];
+                else if (rand < 12.0) item = weaponDatabase[6];
+                else if (rand < 18.0) item = weaponDatabase[7];
+                else if (rand < 25.0) item = weaponDatabase[8];
+                else if (rand < 35.0) item = weaponDatabase[9];
+                else if (rand < 48.0) item = weaponDatabase[10];
+                else if (rand < 62.0) item = weaponDatabase[11];
+                else if (rand < 76.0) item = weaponDatabase[12];
+                else if (rand < 88.0) item = weaponDatabase[13];
+                else if (rand < 95.0) item = weaponDatabase[14];
                 else item = { id: 'item_herb', name: '回復の薬草', atk: 0, rarity: 'N', icon: '🌿', color: 'text-emerald-400' };
 
                 pulledResults.push(item);
@@ -569,7 +602,6 @@
                 const unlockedCount = weaponDatabase.filter(w => gameState.inventory.some(i => i.id === w.id)).length;
                 const percent = Math.round((unlockedCount / totalWeapons) * 100);
 
-                // レア度の優先度（高い順）で並び替え
                 const rarityPriority = { 'GOD': 1, 'UR': 2, 'SSR': 3, 'SR': 4, 'R': 5, 'N': 6 };
                 const sortedWeapons = [...weaponDatabase].sort((a, b) => {
                     return (rarityPriority[a.rarity] || 99) - (rarityPriority[b.rarity] || 99);
@@ -596,19 +628,33 @@
         let threeScene, threeCamera, threeRenderer, heroMesh, bossMesh;
         let animationFrameId = null;
         let bossHp = 10000;
+        let playerHp = 1000;
+        let bossProjectiles = [];
+        let lastAttackTime = 0;
 
         const battleState = {
             keys: { Up: false, Down: false, Left: false, Right: false },
-            hero: { x: 0, z: 15 }
+            hero: { x: 0, z: 15, y: 0 },
+            jumpVelocity: 0,
+            isJumping: false
         };
+
+        function triggerJump() {
+            if (!battleState.isJumping) {
+                battleState.isJumping = true;
+                battleState.jumpVelocity = 0.55;
+            }
+        }
 
         function openWorldAdventure() {
             document.getElementById('world-3d-modal').classList.remove('hidden');
             document.getElementById('3d-weapon-name').innerText = gameState.equippedWeapon.name;
             document.getElementById('3d-weapon-atk').innerText = gameState.equippedWeapon.atk;
-            setTimeout(() => {
-                init3DWorld();
-            }, 100);
+            playerHp = 1000;
+            bossHp = 10000;
+            bossProjectiles = [];
+
+            setTimeout(init3DScene, 100);
         }
 
         function close3DWorld() {
@@ -616,210 +662,137 @@
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
         }
 
-        function init3DWorld() {
+        function init3DScene() {
             const holder = document.getElementById('threejs-canvas-holder');
             if (!holder) return;
-            holder.innerHTML = '';
-
-            const width = holder.clientWidth || 600;
-            const height = holder.clientHeight || 400;
+            holder.innerHTML = `
+                <div class="absolute top-3 left-3 flex flex-col gap-1 z-10">
+                    <div class="bg-blue-950/80 border border-blue-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-blue-200 shadow">
+                        <span>❤️ 勇者HP:</span>
+                        <span id="player-hp" class="text-cyan-300 text-xs font-black">${playerHp}</span>
+                    </div>
+                    <div class="bg-rose-950/80 border border-rose-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-rose-200 shadow">
+                        <span>😈 魔王HP:</span>
+                        <span id="boss-hp" class="text-rose-400 text-xs font-black">${bossHp}</span>
+                    </div>
+                </div>
+                <div class="absolute top-3 right-3 bg-cyan-950/80 border border-cyan-500/60 px-3 py-1 rounded-full text-[11px] font-bold text-cyan-200 z-10 flex items-center gap-1.5 shadow">
+                    <span>🖱️ 右クリック: 視点 | [Space]: ジャンプ回避</span>
+                </div>
+                <button id="jump-btn" onclick="triggerJump()" class="absolute bottom-4 right-4 w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 text-slate-950 font-black border-2 border-white/80 shadow-2xl z-10 flex flex-col items-center justify-center active:scale-90 transition transform">
+                    <span class="text-lg">🦘</span>
+                    <span class="text-[9px] leading-tight">JUMP</span>
+                </button>
+            `;
 
             threeScene = new THREE.Scene();
-            threeScene.background = new THREE.Color(0x0a1128);
-            threeScene.fog = new THREE.FogExp2(0x0a1128, 0.005);
+            threeScene.background = new THREE.Color(0x0f172a);
+            threeScene.fog = new THREE.FogExp2(0x0f172a, 0.015);
 
-            threeCamera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-            threeCamera.position.set(0, 12, 30);
+            threeCamera = new THREE.PerspectiveCamera(60, holder.clientWidth / holder.clientHeight, 0.1, 1000);
+            threeCamera.position.set(0, 10, 25);
 
             threeRenderer = new THREE.WebGLRenderer({ antialias: true });
-            threeRenderer.setSize(width, height);
-            threeRenderer.shadowMap.enabled = true;
+            threeRenderer.setSize(holder.clientWidth, holder.clientHeight);
             holder.appendChild(threeRenderer.domElement);
 
-            const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-            threeScene.add(ambient);
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            threeScene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
-            dirLight.position.set(50, 100, 50);
-            dirLight.castShadow = true;
+            const dirLight = new THREE.DirectionalLight(0xf59e0b, 1.2);
+            dirLight.position.set(10, 20, 10);
             threeScene.add(dirLight);
 
-            const gridHelper = new THREE.GridHelper(500, 50, 0x00ffcc, 0x1d4ed8);
-            gridHelper.position.y = 0.01;
+            // Ground Grid
+            const gridHelper = new THREE.GridHelper(100, 50, 0xf59e0b, 0x334155);
             threeScene.add(gridHelper);
 
-            const groundGeo = new THREE.PlaneGeometry(500, 500);
-            const groundMat = new THREE.MeshLambertMaterial({ color: 0x15803d });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            threeScene.add(ground);
-
-            heroMesh = new THREE.Group();
-            const bodyGeo = new THREE.BoxGeometry(1.2, 1.8, 0.8);
-            const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1e293b });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.9;
-            heroMesh.add(body);
-
-            const headGeo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
-            const headMat = new THREE.MeshLambertMaterial({ color: 0xf87171 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 2.1;
-            heroMesh.add(head);
-
-            const swordMesh = new THREE.Mesh(
-                new THREE.BoxGeometry(0.2, 2.0, 0.2),
-                new THREE.MeshLambertMaterial({ color: 0xf59e0b })
-            );
-            swordMesh.position.set(0.8, 1.2, 0.3);
-            heroMesh.add(swordMesh);
-
-            heroMesh.position.set(battleState.hero.x, 0, battleState.hero.z);
+            // Hero (Blue Sphere)
+            const heroGeo = new THREE.SphereGeometry(1, 16, 16);
+            const heroMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 });
+            heroMesh = new THREE.Mesh(heroGeo, heroMat);
+            heroMesh.position.set(0, 1, 15);
             threeScene.add(heroMesh);
 
-            const templeGroup = new THREE.Group();
-            const pillarGeo = new THREE.CylinderGeometry(0.8, 0.8, 8, 8);
-            const pillarMat = new THREE.MeshLambertMaterial({ color: 0xfbbf24 });
-            for (let i = -2; i <= 2; i += 4) {
-                for (let j = -2; j <= 2; j += 4) {
-                    const p = new THREE.Mesh(pillarGeo, pillarMat);
-                    p.position.set(i * 3, 4, j * 3);
-                    templeGroup.add(p);
-                }
-            }
-
-            bossMesh = new THREE.Mesh(
-                new THREE.ConeGeometry(2, 4, 6),
-                new THREE.MeshLambertMaterial({ color: 0xd97706 })
-            );
-            bossMesh.position.set(0, 2, -10);
-            templeGroup.add(bossMesh);
-            threeScene.add(templeGroup);
+            // Boss (Red Icosahedron)
+            const bossGeo = new THREE.IcosahedronGeometry(2.5, 1);
+            const bossMat = new THREE.MeshStandardMaterial({ color: 0xef4444, wireframe: true });
+            bossMesh = new THREE.Mesh(bossGeo, bossMat);
+            bossMesh.position.set(0, 2.5, -10);
+            threeScene.add(bossMesh);
 
             setupControls(holder);
             animate3D();
         }
 
-        let isRightMouseDown = false;
-        let prevCamX = 0, prevCamY = 0;
-
-        function setupControls(container) {
-            container.addEventListener('contextmenu', e => e.preventDefault());
-
-            container.addEventListener('mousedown', (e) => {
-                if (e.button === 2) {
-                    isRightMouseDown = true;
-                    prevCamX = e.clientX;
-                    prevCamY = e.clientY;
-                }
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (isRightMouseDown && heroMesh) {
-                    const deltaX = e.clientX - prevCamX;
-                    const deltaY = e.clientY - prevCamY;
-
-                    heroMesh.rotation.y -= deltaX * 0.005;
-
-                    if (threeCamera) {
-                        threeCamera.position.y = Math.max(2, Math.min(25, threeCamera.position.y + deltaY * 0.05));
-                    }
-
-                    prevCamX = e.clientX;
-                    prevCamY = e.clientY;
-                }
-            });
-
-            window.addEventListener('mouseup', (e) => {
-                if (e.button === 2) isRightMouseDown = false;
-            });
-
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'w' || e.key === 'ArrowUp') battleState.keys.Up = true;
-                if (e.key === 's' || e.key === 'ArrowDown') battleState.keys.Down = true;
-                if (e.key === 'a' || e.key === 'ArrowLeft') battleState.keys.Left = true;
-                if (e.key === 'd' || e.key === 'ArrowRight') battleState.keys.Right = true;
-            });
-
-            window.addEventListener('keyup', (e) => {
-                if (e.key === 'w' || e.key === 'ArrowUp') battleState.keys.Up = false;
-                if (e.key === 's' || e.key === 'ArrowDown') battleState.keys.Down = false;
-                if (e.key === 'a' || e.key === 'ArrowLeft') battleState.keys.Left = false;
-                if (e.key === 'd' || e.key === 'ArrowRight') battleState.keys.Right = false;
-            });
-
-            setupTouchControls(container);
-        }
-
-        function setupTouchControls(container) {
-            const joystickZone = document.getElementById('joystick-zone');
-            const joystickKnob = document.getElementById('joystick-knob');
-            let joystickTouchId = null;
-            let joystickCenter = { x: 0, y: 0 };
-
-            container.addEventListener('touchstart', (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    const rect = joystickZone.getBoundingClientRect();
-
-                    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-                        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-                        joystickTouchId = touch.identifier;
-                        joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-                        updateJoystick(touch.clientX, touch.clientY);
-                    }
-                }
-            }, { passive: true });
-
-            container.addEventListener('touchmove', (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    if (touch.identifier === joystickTouchId) {
-                        updateJoystick(touch.clientX, touch.clientY);
-                    }
-                }
-            }, { passive: true });
-
-            const resetTouch = (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    if (touch.identifier === joystickTouchId) {
-                        joystickTouchId = null;
-                        battleState.keys.Up = battleState.keys.Down = battleState.keys.Left = battleState.keys.Right = false;
-                        if (joystickKnob) joystickKnob.style.transform = 'translate(0px, 0px)';
-                    }
+        function setupControls(holder) {
+            window.onkeydown = (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') battleState.keys.Up = true;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') battleState.keys.Down = true;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') battleState.keys.Left = true;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') battleState.keys.Right = true;
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    triggerJump();
                 }
             };
 
-            container.addEventListener('touchend', resetTouch);
-            container.addEventListener('touchcancel', resetTouch);
+            window.onkeyup = (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') battleState.keys.Up = false;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') battleState.keys.Down = false;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') battleState.keys.Left = false;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') battleState.keys.Right = false;
+            };
 
-            function updateJoystick(clientX, clientY) {
-                const dx = clientX - joystickCenter.x;
-                const dy = clientY - joystickCenter.y;
-                const dist = Math.hypot(dx, dy);
-                const maxDist = 38;
-                const angle = Math.atan2(dy, dx);
-                const cappedDist = Math.min(dist, maxDist);
+            let isMouseDown = false;
+            let prevX = 0, prevY = 0;
 
-                const moveX = Math.cos(angle) * cappedDist;
-                const moveY = Math.sin(angle) * cappedDist;
-
-                if (joystickKnob) {
-                    joystickKnob.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            holder.onmousedown = (e) => {
+                if (e.button === 2) {
+                    isMouseDown = true;
+                    prevX = e.clientX;
+                    prevY = e.clientY;
                 }
+            };
 
-                const threshold = 10;
-                battleState.keys.Right = dx > threshold;
-                battleState.keys.Left = dx < -threshold;
-                battleState.keys.Down = dy > threshold;
-                battleState.keys.Up = dy < -threshold;
-            }
+            holder.onmousemove = (e) => {
+                if (isMouseDown && heroMesh) {
+                    const deltaX = e.clientX - prevX;
+                    heroMesh.rotation.y -= deltaX * 0.01;
+                    prevX = e.clientX;
+                    prevY = e.clientY;
+                }
+            };
+
+            holder.onmouseup = () => isMouseDown = false;
+            holder.oncontextmenu = (e) => e.preventDefault();
+        }
+
+        function spawnBossAttack() {
+            if (!bossMesh || !heroMesh) return;
+
+            const projGeo = new THREE.SphereGeometry(0.6, 8, 8);
+            const projMat = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+            const projectile = new THREE.Mesh(projGeo, projMat);
+
+            projectile.position.copy(bossMesh.position);
+            
+            // Direction vector from Boss to Player
+            const dir = new THREE.Vector3().subVectors(heroMesh.position, bossMesh.position).normalize();
+            projectile.userData = { direction: dir, speed: 0.4 };
+
+            threeScene.add(projectile);
+            bossProjectiles.push(projectile);
         }
 
         function animate3D() {
             animationFrameId = requestAnimationFrame(animate3D);
+
+            const now = Date.now();
+            if (now - lastAttackTime > 1500) { // 魔王が1.5秒ごとに攻撃弾を発射
+                spawnBossAttack();
+                lastAttackTime = now;
+            }
 
             const speed = 0.35;
             if (heroMesh) {
@@ -828,10 +801,46 @@
                 if (battleState.keys.Left) heroMesh.translateX(-speed);
                 if (battleState.keys.Right) heroMesh.translateX(speed);
 
+                if (battleState.isJumping) {
+                    heroMesh.position.y += battleState.jumpVelocity;
+                    battleState.jumpVelocity -= 0.03;
+
+                    if (heroMesh.position.y <= 1) {
+                        heroMesh.position.y = 1;
+                        battleState.isJumping = false;
+                        battleState.jumpVelocity = 0;
+                    }
+                }
+
                 const camOffset = new THREE.Vector3(0, 8, 18).applyQuaternion(heroMesh.quaternion);
                 threeCamera.position.lerp(heroMesh.position.clone().add(camOffset), 0.1);
                 threeCamera.lookAt(heroMesh.position.clone().add(new THREE.Vector3(0, 1.5, 0)));
 
+                // Update Demon King attacks (Projectiles)
+                for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+                    const proj = bossProjectiles[i];
+                    proj.position.addScaledVector(proj.userData.direction, proj.userData.speed);
+
+                    // Player Hit Check
+                    if (proj.position.distanceTo(heroMesh.position) < 1.4) {
+                        threeScene.remove(proj);
+                        bossProjectiles.splice(i, 1);
+                        playerHp = Math.max(0, playerHp - 100);
+                        const playerHpEl = document.getElementById('player-hp');
+                        if (playerHpEl) playerHpEl.innerText = playerHp;
+
+                        if (playerHp === 0) {
+                            close3DWorld();
+                            openModal('☠️ ゲームオーバー', '魔王の強烈な攻撃を受けて倒れてしまった... 装備を整えて再挑戦しよう！');
+                            return;
+                        }
+                    } else if (proj.position.distanceTo(bossMesh.position) > 60) {
+                        threeScene.remove(proj);
+                        bossProjectiles.splice(i, 1);
+                    }
+                }
+
+                // Attack Boss
                 if (bossMesh && heroMesh.position.distanceTo(bossMesh.position) < 3.5) {
                     bossHp = Math.max(0, bossHp - gameState.equippedWeapon.atk);
                     const bossHpEl = document.getElementById('boss-hp');
@@ -843,7 +852,9 @@
                         gameState.diamonds += 100;
                         saveState();
                         updateUI();
+                        close3DWorld();
                         openModal('🎉 魔王撃破！', '魔王を撃破しました！報酬として「竜のダイヤ +100個」を獲得！');
+                        return;
                     }
                 }
             }
