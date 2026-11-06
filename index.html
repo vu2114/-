@@ -653,7 +653,10 @@
                 // Boss Collision Check
                 if (bossMesh && heroMesh.position.distanceTo(bossMesh.position) < 3.5) {
                     bossHp = Math.max(0, bossHp - gameState.equippedWeapon.atk);
-                    document.getElementById('boss-hp').innerText = bossHp;
+                    const bossHpEl = document.getElementById('boss-hp');
+                    if (bossHpEl) {
+                        bossHpEl.innerText = bossHp;
+                    }
                     if (bossHp === 0) {
                         bossHp = 10000;
                         gameState.diamonds += 100;
