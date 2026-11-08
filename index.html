@@ -3,1175 +3,727 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勇者の世界ガチャ - 3Dオープンワールド</title>
+    <title>勇者の世界ガチャ & 3DオープンワールドRPG</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Three.js Library -->
+    <!-- Three.js for 3D graphics -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
         body {
-            background-color: #0b0510;
-            color: #f3f4f6;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
             user-select: none;
             -webkit-user-select: none;
         }
-        .gacha-box {
-            background: rgba(18, 9, 26, 0.85);
-            border: 1px solid rgba(217, 119, 6, 0.4);
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.85);
-        }
-        #threejs-canvas-holder canvas {
-            display: block;
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: 0.75rem;
-            touch-action: none;
-        }
-        @keyframes spin-seal {
+        
+        /* Continuously Rotating Magic Circle Animations */
+        @keyframes rotateClockwise {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .animate-spin-seal {
-            animation: spin-seal 12s linear infinite;
+        @keyframes rotateCounterClockwise {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
         }
-        @keyframes pulse-glow {
-            0%, 100% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.05); }
+        @keyframes magicPulse {
+            0%, 100% { filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.7)); }
+            50% { filter: drop-shadow(0 0 24px rgba(236, 72, 153, 0.9)); }
         }
-        .animate-pulse-glow {
-            animation: pulse-glow 2.5s ease-in-out infinite;
+
+        .spin-outer {
+            animation: rotateClockwise 35s linear infinite;
+            transform-origin: center;
+        }
+        .spin-mid {
+            animation: rotateCounterClockwise 25s linear infinite;
+            transform-origin: center;
+        }
+        .spin-inner {
+            animation: rotateClockwise 15s linear infinite;
+            transform-origin: center;
+        }
+        .magic-pulse {
+            animation: magicPulse 4s ease-in-out infinite;
+        }
+
+        /* Detailed Alchemical Magic Circle SVG Rendering Style */
+        .alchemical-circle {
+            background: radial-gradient(circle, rgba(20, 10, 30, 0.95) 0%, rgba(5, 3, 10, 0.98) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.5), inset 0 0 25px rgba(168, 85, 247, 0.6);
+        }
+
+        /* Cut-in Gacha Animation */
+        @keyframes rainbowShine {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+        .rainbow-bg {
+            animation: rainbowShine 3s linear infinite;
+        }
+
+        /* Damage Text Floating Animation */
+        @keyframes floatUpDamage {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            50% { opacity: 1; transform: translateY(-40px) scale(1.4); }
+            100% { opacity: 0; transform: translateY(-80px) scale(1); }
+        }
+        .damage-pop {
+            position: absolute;
+            pointer-events: none;
+            font-weight: 900;
+            color: #facc15;
+            text-shadow: 0 0 10px #ef4444, 2px 2px 0 #000;
+            animation: floatUpDamage 0.8s ease-out forwards;
+            z-index: 50;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between p-2 md:p-6 bg-[#0b0510] text-gray-100 select-none">
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-12">
 
-    <!-- Header Section -->
-    <header class="max-w-4xl w-full mx-auto mb-3">
-        <div class="flex items-center justify-between mb-3">
-            <button onclick="openGenericModal('modal-menu')" class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/40 shadow hover:bg-amber-500/40 active:scale-95 transition">
-                <i class="fa-solid fa-bars text-sm"></i>
-            </button>
-            
-            <div class="text-center flex flex-col items-center">
-                <h1 class="text-xl md:text-3xl font-black text-amber-300 tracking-wider flex items-center gap-2 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
-                    <i class="fa-solid fa-shield-halved text-amber-400"></i> 勇者の世界ガチャ <i class="fa-solid fa-shield-halved text-amber-400"></i>
-                </h1>
-                <p class="text-[11px] text-amber-200/80 mt-0.5 font-semibold">✨ 究極の神々を召喚し、次元の魔王を討伐せよ！ ✨</p>
-            </div>
-
-            <div class="flex items-center gap-1.5">
-                <button onclick="addSpinsAction()" class="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-950 text-[11px] font-black flex items-center gap-1 shadow hover:brightness-110 active:scale-95 transition">
-                    <i class="fa-solid fa-plus text-xs"></i> 召喚+50
-                </button>
-                <button onclick="toggleAudio()" class="w-8 h-8 rounded-xl bg-gray-900/80 text-gray-300 flex items-center justify-center border border-gray-700/80 hover:bg-gray-800">
-                    <i id="bgm-icon" class="fa-solid fa-volume-xmark text-xs"></i>
-                </button>
-                <button onclick="openGenericModal('modal-updates')" class="w-8 h-8 rounded-xl bg-gray-900/80 text-gray-300 flex items-center justify-center border border-gray-700/80 hover:bg-gray-800">
-                    <i class="fa-solid fa-gear text-xs"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Upper Status Card -->
-        <div class="gacha-box rounded-2xl p-3 border border-amber-500/40 flex flex-col gap-2">
-            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="bg-amber-950/90 text-amber-300 px-3 py-1 rounded-xl border border-amber-500/50 font-bold flex items-center gap-1 shadow-inner">
-                        ✨ 召喚可能: <strong id="stat-spins" class="text-white text-sm font-black">100</strong> 回
-                    </span>
-                    <button onclick="addSpinsAction()" class="bg-amber-500 hover:bg-amber-400 text-gray-950 font-black text-[11px] px-2.5 py-1 rounded-xl transition shadow active:scale-95">
-                        本日の限界突破 (+50回)
-                    </button>
-                    <button onclick="openRatesModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-[11px] px-2.5 py-1 rounded-xl transition shadow flex items-center gap-1 active:scale-95">
-                        <i class="fa-solid fa-percent"></i> 排出確率
-                    </button>
+    <!-- Top Header Navigation & Status Bar -->
+    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-40 px-4 py-3 shadow-lg">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 text-amber-400">
+                    <i class="fa-solid fa-crown text-amber-400"></i>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span class="bg-purple-950/90 text-purple-200 px-3 py-1 rounded-xl border border-purple-500/40 font-bold text-xs shadow-inner">
-                        ⚡ 勇者Lv: <strong id="stat-level" class="text-yellow-300 font-extrabold text-sm">1</strong> (EXP: <span id="stat-exp" class="text-white">0</span>)
-                    </span>
+                    <i class="fa-solid fa-shield-halved text-amber-400 text-xl"></i>
+                    <h1 class="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                        超・勇者の世界ガチャRPG
+                    </h1>
                 </div>
             </div>
 
-            <!-- Equipped Weapon Display with Icon Picture -->
-            <div class="bg-black/70 p-2.5 rounded-xl border border-amber-500/30 flex items-center justify-between shadow-inner">
-                <div class="flex items-center gap-2.5">
-                    <div id="equipped-icon-box" class="w-9 h-9 rounded-lg bg-gray-900 border border-amber-400 flex items-center justify-center text-amber-400 text-lg shadow">
-                        ✊
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[10px] text-amber-300/80 font-bold">【現在装着中の最強装備】</span>
-                        <span id="equipped-weapon-name" class="text-xs text-white font-black tracking-wide">
-                            素手 (攻撃力: 10)
-                        </span>
-                    </div>
+            <!-- Currency & Stats -->
+            <div class="flex items-center gap-3 text-xs sm:text-sm">
+                <div class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
+                    <i class="fa-solid fa-coins text-yellow-400"></i>
+                    <span id="goldText" class="font-bold text-amber-300">1,000 G</span>
                 </div>
-                <button onclick="pullGacha(1)" class="bg-gradient-to-r from-amber-400 to-amber-600 hover:brightness-110 text-gray-950 text-xs font-black px-3.5 py-1.5 rounded-xl shadow active:scale-95 transition border border-amber-200">
-                    1回引く
+                <div class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-yellow-400"></i>
+                    <span class="font-bold">Lv.<span id="heroLevelText">1</span></span>
+                </div>
+                <button onclick="resetDailyLimit()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-rotate text-amber-400"></i>
+                    <span>召喚回復</span>
                 </button>
-            </div>
-
-            <!-- Stats Row with 2 Hour Timer Counter -->
-            <div class="flex flex-wrap items-center justify-between text-[11px] text-gray-400 px-1 font-medium gap-1">
-                <span>💎 竜のダイヤ: <strong id="stat-diamonds" class="text-cyan-400 font-bold">0</strong> 個</span>
-                <span>🏆 累計召喚: <strong id="stat-total-pulls" class="text-purple-300 font-bold">0</strong> 回</span>
-                <span>⚡ 召喚カウント: <strong id="stat-daily-limit" class="text-amber-300 font-bold">0/500</strong> 回</span>
-                <span class="text-rose-300 font-bold bg-rose-950/70 px-2.5 py-0.5 rounded-lg border border-rose-500/40 shadow-inner flex items-center gap-1">
-                    ⏳ 制限リセットまで: <strong id="timer-countdown" class="text-white font-mono">02:00:00</strong>
-                </span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Grid -->
-    <main class="max-w-4xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 my-auto items-stretch">
-        
-        <!-- Left Column Buttons -->
-        <section class="flex flex-col justify-between gap-2.5">
-            <button onclick="openWorldAdventure()" class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-gray-950 font-black text-base rounded-2xl shadow-[0_0_20px_rgba(16,185,129,0.4)] transition transform active:scale-95 flex items-center justify-center gap-2 border border-emerald-300">
-                <span class="text-2xl animate-bounce">🌍</span>
-                広大な世界へ冒険に出かける！(3Dバトル)
-            </button>
+    <!-- Main Content Area -->
+    <main class="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
 
-            <!-- Action Buttons Row (Horizontal 6 Cards with Icon Top and Label Bottom) -->
-            <div class="grid grid-cols-6 gap-1.5">
-                <button onclick="openGenericModal('modal-stats')" class="py-2.5 px-1 bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-box text-amber-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">所持装備</span>
-                </button>
-                <button onclick="openRatesModal()" class="py-2.5 px-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-chart-pie text-purple-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">提供確率</span>
-                </button>
-                <button onclick="openGenericModal('modal-local')" class="py-2.5 px-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-dungeon text-amber-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">ダンジョン</span>
-                </button>
-                <button onclick="openGenericModal('modal-tasks')" class="py-2.5 px-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-scroll text-amber-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">クエスト</span>
-                </button>
-                <button onclick="openGenericModal('modal-trade')" class="py-2.5 px-1 bg-teal-950/80 hover:bg-teal-900 border border-teal-700/60 text-teal-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-flask text-teal-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">錬金所</span>
-                </button>
-                <button onclick="openGenericModal('modal-live')" class="py-2.5 px-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-purple-200 rounded-xl flex flex-col items-center justify-center shadow transition active:scale-95">
-                    <i class="fa-solid fa-music text-purple-400 text-base mb-1"></i>
-                    <span class="text-[10px] font-bold text-center leading-tight">BGM</span>
+        <!-- Gacha Main View Wrapper -->
+        <div id="gachaMainView" class="flex flex-col gap-6">
+            <!-- 1. 最強装備表示パネル (画面上部・特大表示) -->
+            <div class="w-full bg-slate-900/90 border-2 border-amber-500/30 rounded-3xl p-5 shadow-2xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl"></div>
+                <div class="flex items-center gap-5 z-10">
+                    <div id="equipIconBox" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 p-2.5 flex items-center justify-center shadow-2xl border-2 border-white/30 shrink-0 transform hover:scale-105 transition">
+                        <!-- SVG graphic loaded via JS -->
+                    </div>
+                    <div>
+                        <div class="text-xs font-black text-amber-400 tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 現在装備中の武器
+                        </div>
+                        <div id="equipName" class="text-xl sm:text-2xl font-black text-white drop-shadow">見習い兵の短剣</div>
+                        <div class="text-sm text-slate-300 mt-1">攻撃力: <span id="equipAtk" class="text-amber-400 font-black text-base">100</span></div>
+                    </div>
+                </div>
+                <button onclick="openModal('inventoryModal')" class="z-10 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-5 py-3 rounded-2xl text-xs font-black shadow-lg transition flex items-center gap-2 transform active:scale-95">
+                    <i class="fa-solid fa-box-archive"></i>
+                    <span>装備を付け替える</span>
                 </button>
             </div>
 
-            <!-- Live Banner Button -->
-            <button onclick="openGenericModal('modal-live')" class="w-full py-2 bg-gradient-to-r from-purple-950 via-slate-900 to-purple-950 border border-purple-700/60 text-pink-300 text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow">
-                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                ⛩️ 魔王城ライブカメラ（戦況観測中）
-            </button>
-
-            <!-- Home Screen Bottom Additional Features -->
-            <div class="grid grid-cols-3 gap-2 mt-1">
-                <button onclick="openGenericModal('modal-daily')" class="py-2.5 bg-gradient-to-r from-amber-600 to-yellow-600 hover:brightness-110 text-slate-950 font-black rounded-xl flex flex-col items-center justify-center shadow-lg border border-amber-300 active:scale-95 transition">
-                    <span class="text-xs">🎁 デイリー報酬</span>
-                    <span class="text-[10px] text-amber-950 font-extrabold mt-0.5">毎日ボーナス獲得</span>
-                </button>
-                <button onclick="openGenericModal('modal-shop')" class="py-2.5 bg-gradient-to-r from-cyan-900 to-blue-900 hover:brightness-110 text-cyan-200 font-bold rounded-xl flex flex-col items-center justify-center shadow-lg border border-cyan-500/40 active:scale-95 transition">
-                    <span class="text-xs">🛒 道具屋・ショップ</span>
-                    <span class="text-[10px] text-cyan-300 font-medium mt-0.5">ダイヤで購入</span>
-                </button>
-                <button onclick="openGenericModal('modal-dex')" class="py-2.5 bg-gradient-to-r from-purple-900 to-indigo-900 hover:brightness-110 text-purple-200 font-bold rounded-xl flex flex-col items-center justify-center shadow-lg border border-purple-500/40 active:scale-95 transition">
-                    <span class="text-xs">📖 装備図鑑</span>
-                    <span class="text-[10px] text-purple-300 font-medium mt-0.5">全絵＆レア度整列</span>
-                </button>
-            </div>
-        </section>
-
-        <!-- Right Column Gacha Machine Area -->
-        <section class="flex flex-col items-center justify-center h-full">
-            <div class="w-full max-w-[320px] h-[480px] bg-gradient-to-b from-[#d97706] via-[#b45309] to-[#6b21a8] rounded-[42px] p-4 border-2 border-amber-300 flex flex-col items-center justify-between shadow-[0_0_40px_rgba(217,119,6,0.5)] relative overflow-hidden">
+            <!-- 2. 中段レイアウト (左側: メニューボタン / 右側: ガチャマシーン) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 
-                <!-- 豪華な多重回転魔法陣エリア -->
-                <div class="w-60 h-60 rounded-full bg-[#0d0515] border-4 border-amber-500/60 flex items-center justify-center relative my-auto shadow-[0_0_35px_rgba(245,158,11,0.5)] overflow-hidden">
-                    
-                    <!-- 背景の怪しい紫の輝き -->
-                    <div class="absolute inset-0 bg-radial from-purple-900/50 via-amber-950/30 to-transparent"></div>
+                <!-- 左側：アクション＆メニュー操作 -->
+                <div class="flex flex-col gap-4 order-2 md:order-1">
+                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-3">
+                        <h2 class="text-sm font-black text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-gamepad"></i> 冒険メニュー & ステータス
+                        </h2>
+                        
+                        <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50 flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-300">本日の残り召喚数</span>
+                            <span id="dailyCountText" class="text-sm font-black text-amber-400">600 / 600</span>
+                        </div>
 
-                    <!-- 外枠・ルーン魔法陣（時計回り回転） -->
-                    <div class="absolute w-56 h-56 rounded-full border-2 border-dashed border-amber-400/50 animate-spin-seal"></div>
+                        <button onclick="openModal('rateModal')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-3.5 rounded-xl text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-chart-pie text-amber-400"></i> 提供割合（確率一覧）</span>
+                            <i class="fa-solid fa-chevron-right text-slate-500"></i>
+                        </button>
 
-                    <!-- 中枠・幾何学星型魔法陣（反時計回り回転） -->
-                    <div class="absolute w-44 h-44 border-2 border-purple-400/60 flex items-center justify-center" style="animation: spin-seal 18s linear infinite reverse;">
-                        <div class="w-32 h-32 border-2 border-amber-300/70 rotate-45"></div>
-                        <div class="absolute w-32 h-32 border-2 border-rose-400/60 -rotate-45"></div>
+                        <button onclick="openModal('inventoryModal')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-3.5 rounded-xl text-xs font-bold transition flex items-center justify-between">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-boxes-stacked text-amber-400"></i> 所持装備一覧</span>
+                            <i class="fa-solid fa-chevron-right text-slate-500"></i>
+                        </button>
                     </div>
 
-                    <!-- 内枠・光輪リング -->
-                    <div class="absolute w-50 h-50 rounded-full border border-yellow-300/40 animate-pulse"></div>
-                    <div class="absolute w-28 h-28 rounded-full border-4 border-amber-400/80 shadow-[0_0_20px_rgba(251,191,36,0.9)]"></div>
+                    <!-- 3Dワールド冒険ボタン -->
+                    <button onclick="switchTo3DView()" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-white font-black p-5 rounded-2xl shadow-xl border border-emerald-400/40 flex items-center justify-center gap-3 text-base tracking-wide transition transform hover:-translate-y-0.5 active:scale-95">
+                        <i class="fa-solid fa-dragon text-xl"></i>
+                        <span>3Dオープンワールド・ボス決戦へ！</span>
+                    </button>
+                </div>
 
-                    <!-- Glowing Spheres with Icons -->
-                    <div class="flex items-center gap-3 z-10">
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-rose-400 via-rose-600 to-rose-900 shadow-[0_0_20px_rgba(244,63,94,1)] border-2 border-rose-200 flex items-center justify-center text-lg animate-bounce">🌌</div>
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-cyan-300 via-blue-600 to-blue-900 shadow-[0_0_20px_rgba(59,130,246,1)] border-2 border-cyan-100 flex items-center justify-center text-lg animate-pulse">⚡</div>
-                        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-purple-300 via-purple-600 to-purple-900 shadow-[0_0_20px_rgba(168,85,247,1)] border-2 border-purple-200 flex items-center justify-center text-lg animate-bounce" style="animation-delay: 0.2s;">🔱</div>
+                <!-- 右側：ガチャマシーンカード -->
+                <div class="order-1 md:order-2 flex justify-center">
+                    <div class="w-full max-w-[340px] bg-gradient-to-b from-amber-600 via-amber-800 to-purple-950 rounded-[40px] p-5 shadow-2xl border-4 border-amber-400/80 flex flex-col items-center justify-between relative overflow-hidden min-h-[460px]">
+                        
+                        <!-- 魔法陣エリア (お送りいただいた詳細な幾何学アルケミー魔法陣SVG) -->
+                        <div class="relative w-64 h-64 my-auto flex items-center justify-center alchemical-circle border-2 border-amber-400/60 p-2">
+                            <svg class="absolute inset-0 w-full h-full spin-outer text-amber-400/90" viewBox="0 0 500 500">
+                                <!-- 外周の二重リングと文字群 -->
+                                <circle cx="250" cy="250" r="235" fill="none" stroke="currentColor" stroke-width="6"/>
+                                <circle cx="250" cy="250" r="215" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="8,4"/>
+                                <circle cx="250" cy="250" r="190" fill="none" stroke="currentColor" stroke-width="4"/>
+                                
+                                <!-- 内側の三角形の幾何学配置 -->
+                                <polygon points="250,55 430,375 70,375" fill="none" stroke="currentColor" stroke-width="5"/>
+                                <polygon points="250,445 70,125 430,125" fill="none" stroke="currentColor" stroke-width="3"/>
+                                
+                                <!-- 中心部の複雑な錬金螺旋・ルーンパターン -->
+                                <path d="M250 140 C320 140, 360 200, 330 260 C300 320, 200 300, 190 230 C180 160, 250 120, 280 180 C310 240, 220 340, 160 280" fill="none" stroke="currentColor" stroke-width="6"/>
+                                <circle cx="250" cy="250" r="60" fill="none" stroke="currentColor" stroke-width="4"/>
+                                
+                                <!-- 周囲の小円オーナメント（8箇所） -->
+                                <circle cx="250" cy="25" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="410" cy="90" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="475" cy="250" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="410" cy="410" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="250" cy="475" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="90" cy="410" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="25" cy="250" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                                <circle cx="90" cy="90" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
+                            </svg>
+                            <svg class="absolute inset-4 w-[88%] h-[88%] spin-mid text-purple-400/80" viewBox="0 0 500 500">
+                                <rect x="120" y="120" width="260" height="260" fill="none" stroke="currentColor" stroke-width="3" transform="rotate(45 250 250)"/>
+                                <circle cx="250" cy="250" r="130" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="12,6"/>
+                            </svg>
+
+                            <!-- 中心魔法核 -->
+                            <div class="w-24 h-24 rounded-full border-4 border-amber-300 bg-amber-950/80 backdrop-blur flex items-center justify-center relative shadow-[0_0_30px_rgba(234,179,8,0.8)] magic-pulse z-10">
+                                <i class="fa-solid fa-atom text-4xl text-amber-300 animate-spin"></i>
+                            </div>
+                        </div>
+
+                        <!-- 召喚ボタン群 (1連 / 10連 / 100連) -->
+                        <div class="w-full grid grid-cols-3 gap-2 mt-4 z-10">
+                            <button onclick="drawGacha(1)" class="bg-gradient-to-b from-amber-300 to-amber-500 hover:brightness-110 text-slate-950 font-black py-2.5 px-1 rounded-2xl border-2 border-amber-200 text-xs shadow-md active:scale-95 transition truncate">
+                                1連召喚
+                            </button>
+                            <button onclick="drawGacha(10)" class="bg-gradient-to-b from-indigo-500 to-purple-600 hover:brightness-110 text-white font-black py-2.5 px-1 rounded-2xl border-2 border-indigo-300 text-xs shadow-md active:scale-95 transition truncate">
+                                ✨ 10連
+                            </button>
+                            <button onclick="drawGacha(100)" class="bg-gradient-to-r from-amber-500 via-rose-500 to-orange-500 hover:brightness-110 text-white font-black py-2.5 px-1 rounded-2xl border-2 border-amber-200 text-xs shadow-md active:scale-95 transition truncate">
+                                ⚡ 100連
+                            </button>
+                        </div>
+
+                        <div class="w-24 h-2 bg-slate-950/80 rounded-full mt-3 border border-amber-500/30"></div>
                     </div>
                 </div>
 
-                <div class="w-full flex flex-col items-center gap-2 mb-1">
-                    <!-- ガチャマシン内に直接召喚ボタン（1連・10連・100連）を配置 -->
-                    <div class="w-full grid grid-cols-3 gap-1.5 px-1">
-                        <button onclick="pullGacha(1)" class="py-2.5 bg-gradient-to-b from-amber-300 to-amber-500 hover:from-amber-200 hover:to-amber-400 text-gray-950 font-black rounded-xl text-[11px] shadow border border-amber-200 active:scale-95 transition">
-                            1連召喚
-                        </button>
-                        <button onclick="pullGacha(10)" class="py-2.5 bg-gradient-to-b from-indigo-500 to-indigo-700 hover:from-indigo-400 hover:to-indigo-600 text-white font-black rounded-xl text-[11px] shadow border border-indigo-300 active:scale-95 transition">
-                            ✨ 10連
-                        </button>
-                        <button onclick="pullGacha(100)" class="py-2.5 bg-gradient-to-b from-rose-500 via-amber-500 to-purple-600 hover:brightness-110 text-white font-black rounded-xl text-[11px] shadow border border-amber-200 active:scale-95 transition">
-                            ⚡ 100連
-                        </button>
-                    </div>
+            </div>
+        </div>
 
-                    <div class="w-28 h-6 bg-[#0d0714] rounded-t-3xl border-t-2 border-x-2 border-amber-900/60 flex items-center justify-center shadow-inner">
-                        <div class="w-20 h-1.5 bg-black/80 rounded-full shadow-inner"></div>
-                    </div>
+        <!-- 3D Battle View Wrapper (画面遷移用) -->
+        <div id="battle3DView" class="hidden flex flex-col gap-4">
+            <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+                <div>
+                    <h2 class="text-base font-black text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-khanda"></i> 3Dオープンワールド・魔王決戦
+                    </h2>
+                    <p class="text-xs text-slate-400">画面上の【攻撃】ボタンまたは直接3D空間をタップして攻撃！</p>
+                </div>
+                <button onclick="switchToGachaView()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition">
+                    ← ガチャ画面へ戻る
+                </button>
+            </div>
+
+            <!-- 魔王HPゲージ -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col gap-2">
+                <div class="flex justify-between items-center text-xs font-black">
+                    <span class="text-red-500 flex items-center gap-1.5"><i class="fa-solid fa-skull text-base"></i> 魔王の体力</span>
+                    <span id="bossHpText" class="text-white">10,000,000 / 10,000,000</span>
+                </div>
+                <div class="w-full bg-slate-950 h-5 rounded-full overflow-hidden border border-red-900/50 p-0.5 relative">
+                    <div id="bossHpBar" class="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 h-full rounded-full transition-all duration-300 w-full"></div>
                 </div>
             </div>
-        </section>
+
+            <!-- Three.js Canvas Container & Action Overlay -->
+            <div class="relative w-full h-[500px] rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl bg-black select-none">
+                <div id="canvas3d" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
+                
+                <!-- Floating Damage Numbers Container -->
+                <div id="damageLayer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+                <!-- Battle Controls Overlay -->
+                <div class="absolute bottom-5 right-5 flex items-center gap-3">
+                    <button onclick="trigger3DAttack()" class="w-20 h-20 bg-gradient-to-tr from-red-600 to-amber-500 rounded-full border-4 border-amber-300 text-white font-black text-sm shadow-2xl hover:scale-105 active:scale-95 transition flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-burst text-xl"></i>
+                        <span>攻撃</span>
+                    </button>
+                    <button onclick="triggerSpecialAttack()" class="w-24 h-24 bg-gradient-to-tr from-purple-600 via-pink-600 to-amber-400 rounded-full border-4 border-white text-white font-black text-sm shadow-2xl hover:scale-105 active:scale-95 transition flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles text-2xl animate-bounce"></i>
+                        <span>必殺技</span>
+                    </button>
+                </div>
+
+                <div class="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur px-3 py-1.5 rounded-xl text-[10px] text-slate-400 border border-slate-800 pointer-events-none">
+                    視点: マウスドラッグ / タッチスワイプ
+                </div>
+            </div>
+        </div>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="max-w-5xl w-full mx-auto text-center mt-6 text-xs text-gray-500">
-        © 2026 勇者の世界ガチャ - 3Dオープンワールド RPG
-    </footer>
-
-    <!-- Gacha Animation Cut-in Overlay -->
-    <div id="gacha-animation-overlay" class="fixed inset-0 bg-black/95 backdrop-blur-md hidden z-50 flex flex-col items-center justify-center p-4 overflow-hidden select-none">
-        <div id="gacha-flash-bg" class="absolute inset-0 bg-amber-500/20 opacity-0 transition-opacity duration-300 pointer-events-none"></div>
-
-        <!-- Magic Orb Array -->
-        <div class="relative w-64 h-64 flex items-center justify-center">
-            <!-- Outer Magic Ring -->
-            <div id="anim-ring" class="absolute inset-0 border-4 border-dashed border-amber-400 rounded-full animate-spin-seal opacity-80"></div>
-            <!-- Inner Glowing Aura -->
-            <div id="anim-aura" class="absolute w-48 h-48 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 rounded-full blur-xl opacity-50 transition-all duration-700"></div>
-            
-            <!-- Summoning Core Orb -->
-            <div id="anim-orb" class="w-28 h-28 rounded-full bg-gradient-to-br from-yellow-200 via-amber-400 to-yellow-600 border-4 border-white shadow-[0_0_50px_rgba(251,191,36,0.9)] flex items-center justify-center text-4xl animate-bounce transform transition-all duration-500">
-                🔮
-            </div>
+    <!-- Modal: Gacha Cut-in Animation Screen -->
+    <div id="cutinOverlay" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center hidden">
+        <div id="cutinBg" class="absolute inset-0 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 flex items-center justify-center">
+            <div class="w-[500px] h-[500px] border-4 border-amber-400/40 rounded-full animate-ping opacity-25"></div>
         </div>
-
-        <h2 id="gacha-anim-text" class="text-2xl md:text-3xl font-black text-amber-300 tracking-wider mt-8 animate-pulse text-center">
-            ✨ 異界より召喚中... ✨
-        </h2>
-        <p id="gacha-anim-sub" class="text-xs text-amber-200/70 mt-2 font-bold">次元の歪みから古代の武器が現れる！</p>
-    </div>
-
-    <!-- Gacha Result Modal (with Pictures) -->
-    <div id="result-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-amber-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl relative text-center">
-            <h3 id="result-title" class="text-xl font-black text-amber-300 mb-4">✨ 召喚結果</h3>
-            
-            <div id="result-grid" class="grid grid-cols-3 md:grid-cols-4 gap-2 max-h-72 overflow-y-auto mb-5 p-1">
-                <!-- Items dynamically generated here -->
+        <div class="z-10 text-center flex flex-col items-center gap-6 p-6">
+            <div id="cutinSubText" class="text-sm sm:text-lg font-black text-amber-400 tracking-widest uppercase">
+                Alchemical Summon Ritual
             </div>
-
-            <button onclick="closeResultModal()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-gray-950 font-black rounded-xl transition shadow">
-                確認して受取る
-            </button>
+            <div id="cutinText" class="text-2xl sm:text-4xl font-black text-amber-300 tracking-wider animate-pulse max-w-xl">
+                古代の魔法陣が最大解放され、次元の扉が開く…！
+            </div>
+            <div class="w-40 h-40 rounded-full border-4 border-amber-400 flex items-center justify-center bg-amber-500/20 shadow-[0_0_80px_rgba(245,158,11,0.9)] alchemical-circle">
+                <i class="fa-solid fa-sun text-6xl text-amber-300 spin-outer"></i>
+            </div>
+            <div class="text-xs text-slate-400 animate-pulse">運命の装備を選別中...</div>
         </div>
     </div>
 
-    <!-- Gacha Rates Modal -->
-    <div id="rates-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-purple-500/50 rounded-2xl p-5 max-w-md w-full shadow-2xl relative">
-            <h3 class="text-lg font-bold text-purple-300 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-purple-400"></i> 召喚提供確率一覧（排出率）
+    <!-- Modal: Gacha Results -->
+    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-amber-500/50 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
+            <h3 class="text-xl font-black text-amber-400 text-center mb-4 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-gifts text-amber-300"></i> ★ 召喚（ガチャ）結果 ★
             </h3>
             
-            <div class="space-y-2 text-xs mb-5 max-h-64 overflow-y-auto pr-1">
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-rose-500/40 flex items-center justify-between">
-                    <span class="font-bold text-rose-400 flex items-center gap-1.5">
-                        <span class="text-base">GOD</span> 全次元創世の神剣など
-                    </span>
-                    <span class="bg-rose-950 px-2 py-0.5 rounded text-rose-200 font-bold">1.5%</span>
-                </div>
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-amber-500/40 flex items-center justify-between">
-                    <span class="font-bold text-amber-300 flex items-center gap-1.5">
-                        <span class="text-base">UR</span> 伝説の勇者ロトの剣など
-                    </span>
-                    <span class="bg-amber-950 px-2 py-0.5 rounded text-amber-200 font-bold">5.5%</span>
-                </div>
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-yellow-500/40 flex items-center justify-between">
-                    <span class="font-bold text-yellow-300 flex items-center gap-1.5">
-                        <span class="text-base">SSR</span> 黄金の大剣・賢者の杖など
-                    </span>
-                    <span class="bg-yellow-950 px-2 py-0.5 rounded text-yellow-200 font-bold">12.0%</span>
-                </div>
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-purple-500/40 flex items-center justify-between">
-                    <span class="font-bold text-purple-300 flex items-center gap-1.5">
-                        <span class="text-base">SR</span> 銀のレイピア・バトルアックスなど
-                    </span>
-                    <span class="bg-purple-950 px-2 py-0.5 rounded text-purple-200 font-bold">22.0%</span>
-                </div>
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-blue-500/40 flex items-center justify-between">
-                    <span class="font-bold text-blue-300 flex items-center gap-1.5">
-                        <span class="text-base">R</span> 鉄の長剣・騎士の槍など
-                    </span>
-                    <span class="bg-blue-950 px-2 py-0.5 rounded text-blue-200 font-bold">30.0%</span>
-                </div>
-                <div class="bg-gray-800/80 p-2.5 rounded-xl border border-gray-600 flex items-center justify-between">
-                    <span class="font-bold text-gray-300 flex items-center gap-1.5">
-                        <span class="text-base">N</span> 銅の剣・木彫りの短剣など
-                    </span>
-                    <span class="bg-gray-950 px-2 py-0.5 rounded text-gray-400 font-bold">29.0%</span>
-                </div>
+            <div id="resultGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto p-1 mb-6 max-h-[50vh]">
+                <!-- Item Cards inserted dynamically with staggered reveal effect -->
             </div>
 
-            <button onclick="closeRatesModal()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl transition">
+            <button onclick="closeModal('resultModal')" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black py-3.5 rounded-2xl hover:brightness-110 transition shadow-xl text-xs active:scale-95">
+                確認して獲得
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Drop Rates -->
+    <div id="rateModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            <h3 class="text-base font-black text-amber-400 text-center">召喚確率一覧</h3>
+            <div class="flex flex-col gap-2 text-xs">
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-amber-500/40">
+                    <span class="font-black text-amber-400">KAMI (神)</span>
+                    <span class="font-bold text-white">0.01 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-purple-500/40">
+                    <span class="font-black text-purple-400">GOD</span>
+                    <span class="font-bold text-white">0.10 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-blue-500/40">
+                    <span class="font-black text-blue-400">UR</span>
+                    <span class="font-bold text-white">1.00 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-emerald-500/40">
+                    <span class="font-black text-emerald-400">SSR</span>
+                    <span class="font-bold text-white">5.00 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-600">
+                    <span class="font-black text-slate-300">SR</span>
+                    <span class="font-bold text-white">15.00 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-700">
+                    <span class="font-black text-slate-400">R</span>
+                    <span class="font-bold text-white">20.00 %</span>
+                </div>
+                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-800">
+                    <span class="font-black text-slate-500">N (ノーマル)</span>
+                    <span class="font-bold text-white">58.89 %</span>
+                </div>
+            </div>
+            <button onclick="closeModal('rateModal')" class="w-full bg-slate-800 text-slate-200 font-bold py-2.5 rounded-xl border border-slate-700 text-xs hover:bg-slate-700 transition">
                 閉じる
             </button>
         </div>
     </div>
 
-    <!-- Generic Modal Dialog -->
-    <div id="generic-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
-            <h3 id="modal-title" class="text-lg font-bold text-amber-400 mb-2">タイトル</h3>
-            <div id="modal-body" class="text-sm text-gray-300 whitespace-pre-line mb-6 max-h-72 overflow-y-auto">内容</div>
-            <button onclick="closeGenericModal()" class="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl transition">
+    <!-- Modal: Inventory -->
+    <div id="inventoryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
+            <h3 class="text-base font-black text-amber-400 text-center mb-4">所持装備一覧 & 着脱</h3>
+            <div id="inventoryList" class="flex flex-col gap-2.5 overflow-y-auto mb-4 p-1 max-h-[55vh]">
+                <!-- Inventory Items rendered dynamically -->
+            </div>
+            <button onclick="closeModal('inventoryModal')" class="w-full bg-slate-800 text-slate-200 font-bold py-2.5 rounded-xl border border-slate-700 text-xs hover:bg-slate-700 transition">
                 閉じる
             </button>
         </div>
     </div>
 
-    <!-- 3D Open World Modal -->
-    <div id="world-3d-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md hidden z-50 flex flex-col items-center justify-center p-2 md:p-4">
-        <div class="bg-gray-900/90 border border-amber-500/50 rounded-2xl p-3 md:p-4 max-w-2xl w-full flex flex-col gap-2 shadow-2xl relative">
-            <div class="text-center py-1 flex items-center justify-between px-2">
-                <h3 class="text-lg font-black text-amber-300 flex items-center gap-2">
-                    🌍 3Dオープンワールド冒険モード
-                </h3>
-                <span class="text-xs text-emerald-400 font-bold">Stage: 魔王城の決戦場</span>
-            </div>
-
-            <div class="flex items-center justify-between text-xs font-bold bg-amber-950/60 border border-amber-500/40 rounded-xl px-3 py-1.5 text-amber-200">
-                <span>🗡️ 装備: <span id="3d-weapon-name" class="text-white">素手</span></span>
-                <span>💥 攻撃力: <span id="3d-weapon-atk" class="text-rose-400">10</span></span>
-                <span>📍 討伐数: <span id="3d-kill-count" class="text-amber-300">0</span> 体</span>
-            </div>
-
-            <div id="threejs-canvas-holder" class="w-full h-[360px] md:h-[400px] bg-black rounded-xl relative overflow-hidden border border-amber-500/30">
-                <!-- HP Bars UI Overlay -->
-                <div class="absolute top-3 left-3 right-3 flex flex-col gap-2 z-10 pointer-events-none">
-                    <!-- 大迫力の魔王HPビッグテキスト表示（最上部中央） -->
-                    <div class="w-full text-center py-1 bg-black/80 rounded-xl border border-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.6)] backdrop-blur-md">
-                        <span class="text-xs md:text-sm font-black text-rose-400 tracking-wider">
-                            👿 魔王の体力：<span id="boss-hp-big" class="text-amber-300 text-sm md:text-lg font-mono font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.9)]">10000 / 10000</span>
-                        </span>
-                    </div>
-
-                    <!-- Hero HP Bar -->
-                    <div class="bg-gray-950/85 border border-cyan-500/60 rounded-xl p-1.5 shadow-lg backdrop-blur-sm flex flex-col gap-1">
-                        <div class="flex items-center justify-between text-[11px] font-extrabold text-cyan-200 px-1">
-                            <span class="flex items-center gap-1">💙 勇者 HP</span>
-                            <span class="text-white font-mono"><span id="player-hp" class="text-cyan-300">1000</span> / 1000</span>
-                        </div>
-                        <div class="w-full bg-gray-900 rounded-full h-3.5 border border-cyan-500/30 overflow-hidden relative shadow-inner">
-                            <div id="player-hp-bar" class="bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 h-full rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(6,182,212,0.8)]" style="width: 100%;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Demon King Boss HP Bar -->
-                    <div class="bg-gray-950/85 border border-rose-500/60 rounded-xl p-1.5 shadow-lg backdrop-blur-sm flex flex-col gap-1">
-                        <div class="flex items-center justify-between text-[11px] font-extrabold text-rose-200 px-1">
-                            <span class="flex items-center gap-1">👿 魔王 ゲージ</span>
-                            <span class="text-white font-mono"><span id="boss-hp" class="text-rose-400">10000</span> / 10000</span>
-                        </div>
-                        <div class="w-full bg-gray-900 rounded-full h-4 border border-rose-500/30 overflow-hidden relative shadow-inner">
-                            <div id="boss-hp-bar" class="bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 h-full rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(244,63,94,0.9)]" style="width: 100%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- On-Screen Jump Button for Mobile/Touch -->
-                <div class="absolute bottom-3 right-3 z-20">
-                    <button onclick="triggerJump()" class="px-5 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-gray-950 font-black text-sm rounded-full shadow-[0_0_20px_rgba(245,158,11,0.6)] border border-yellow-100 active:scale-90 transition">
-                        🦘 ジャンプ
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between gap-2 mt-1">
-                <p class="text-[11px] text-gray-400 font-medium">【操作】[WASD/矢印] 移動 / [Space/ボタン] ジャンプ / ドラッグ 360°カメラ回転</p>
-                <button onclick="close3DWorld()" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow">
-                    冒険を中断して戻る
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Application Logic -->
+    <!-- JavaScript Game Engine & Logic -->
     <script>
-        // --- GAME STATE & DATABASE WITH EXTENDED ITEMS ---
-        const gameState = {
-            spins: 100,
-            diamonds: 0,
-            exp: 0,
-            level: 1,
-            bossKills: 0,
-            totalPulls: 0,
-            sessionPulls: 0,
-            lastResetTime: Date.now(),
-            inventory: [
-                { id: 'w_fist', name: '素手', atk: 10, rarity: 'N', icon: '✊' }
-            ],
-            equippedWeapon: { id: 'w_fist', name: '素手', atk: 10, rarity: 'N', icon: '✊' }
+        // Modal Open & Close Helper Functions
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+                if (modalId === 'inventoryModal') {
+                    updateInventoryUI();
+                }
+            }
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function resetDailyLimit() {
+            dailyLimit = 600;
+            const dailyText = document.getElementById('dailyCountText');
+            if (dailyText) {
+                dailyText.innerText = `${dailyLimit} / 600`;
+            }
+        }
+
+        // High Quality SVG Visual Graphics for Items (Enlarged & Detailed)
+        const SVGS = {
+            kami: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_12px_rgba(234,179,8,1)]"><path d="M50 5 L60 35 L95 40 L68 62 L78 95 L50 75 L22 95 L32 62 L5 40 L40 35 Z" fill="url(#kamiGrad)" stroke="#fef08a" stroke-width="2.5"/><circle cx="50" cy="50" r="12" fill="#fff" class="animate-pulse"/><defs><linearGradient id="kamiGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#eab308"/><stop offset="100%" stop-color="#b45309"/></linearGradient></defs></svg>`,
+            god: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_10px_rgba(168,85,247,1)]"><path d="M50 10 L65 30 L90 50 L65 70 L50 90 L35 70 L10 50 L35 30 Z" fill="url(#godGrad)" stroke="#e9d5ff" stroke-width="2.5"/><circle cx="50" cy="50" r="15" fill="#f472b6"/><defs><linearGradient id="godGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c084fc"/><stop offset="100%" stop-color="#581c87"/></linearGradient></defs></svg>`,
+            ur: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(59,130,246,0.9)]"><path d="M20 85 L80 85 L50 15 Z" fill="url(#urGrad)" stroke="#93c5fd" stroke-width="2.5"/><rect x="44" y="60" width="12" height="30" fill="#1e3a8a"/><defs><linearGradient id="urGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient></defs></svg>`,
+            ssr: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.9)]"><circle cx="50" cy="50" r="38" fill="url(#ssrGrad)" stroke="#a7f3d0" stroke-width="2.5"/><path d="M50 15 L50 85 M15 50 L85 50" stroke="#ecfdf5" stroke-width="5"/><defs><linearGradient id="ssrGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#047857"/></linearGradient></defs></svg>`,
+            sr: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M30 20 L70 20 L85 80 L15 80 Z" fill="#475569" stroke="#94a3b8" stroke-width="2.5"/><circle cx="50" cy="50" r="14" fill="#64748b"/></svg>`,
+            r: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="20" y="20" width="60" height="60" rx="12" fill="#334155" stroke="#64748b" stroke-width="2.5"/></svg>`,
+            n: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 15 L85 85 L15 85 Z" fill="#1e293b" stroke="#475569" stroke-width="2.5"/></svg>`
         };
 
-        const weaponDatabase = [
-            { id: 'w_omni', name: '全次元創世の神剣', atk: 12000, rarity: 'GOD', icon: '🌌', color: 'text-rose-300', desc: 'すべての世界を創造し破壊する究極の神器' },
-            { id: 'w_god_zenith', name: '神覇剣・ゼニス', atk: 9500, rarity: 'GOD', icon: '⚡', color: 'text-yellow-300', desc: '雷光の絶技で時空を薙ぎ払う神器' },
-            { id: 'w_god', name: '神威・天叢雲剣', atk: 7500, rarity: 'GOD', icon: '⚔️', color: 'text-rose-400', desc: '神の雷を纏いし伝説の一閃' },
-            { id: 'w_god_dragon', name: '竜神の覇王剣', atk: 6800, rarity: 'GOD', icon: '🐲', color: 'text-amber-300', desc: '古代竜の魂が宿る最強の破壊剣' },
-            { id: 'w_god_orbit', name: '天球儀の聖杖', atk: 6200, rarity: 'GOD', icon: '🪐', color: 'text-purple-300', desc: '星々の軌道を操る宇宙の魔杖' },
-            { id: 'w_god_shield', name: 'イージスの神盾', atk: 5500, rarity: 'GOD', icon: '🛡️', color: 'text-cyan-300', desc: 'あらゆる攻撃を無効化する絶対防壁' },
-            { id: 'w_hero', name: '伝説の勇者ロトの剣', atk: 3200, rarity: 'UR', icon: '👑', color: 'text-amber-300', desc: '世界を救いし勇者の聖剣' },
-            { id: 'w_ur_bow', name: 'アルテミスの神弓', atk: 2850, rarity: 'UR', icon: '🏹', color: 'text-cyan-300', desc: '光の矢で悪を射抜く精霊の弓' },
-            { id: 'w_ur_scythe', name: '死神の魔鎌', atk: 2600, rarity: 'UR', icon: '🖤', color: 'text-purple-300', desc: '魂を刈り取る闇の鎌' },
-            { id: 'w_ur_valkyrie', name: 'ヴァルキリーランス', atk: 2400, rarity: 'UR', icon: '🔱', color: 'text-rose-300', desc: '天界の女戦士が愛用した神槍' },
-            { id: 'w_ur_excalibur', name: '聖剣エクスカリバー', atk: 2200, rarity: 'UR', icon: '🗡️', color: 'text-yellow-200', desc: '湖の貴婦人より授かりし約束の勝利の剣' },
-            { id: 'w_gold', name: '黄金の大剣', atk: 1200, rarity: 'SSR', icon: '🔱', color: 'text-yellow-400', desc: '眩く輝く純金製の大剣' },
-            { id: 'w_ssr_staff', name: '賢者の杖', atk: 980, rarity: 'SSR', icon: '🪄', color: 'text-purple-300', desc: '大魔法を操る高貴な魔導杖' },
-            { id: 'w_ssr_katana', name: '妖刀・村正', atk: 1050, rarity: 'SSR', icon: '🗡️', color: 'text-rose-400', desc: '血を吸うごとに切れ味が増す魔刀' },
-            { id: 'w_ssr_hammer', name: 'タイタンの戦槌', atk: 1100, rarity: 'SSR', icon: '🔨', color: 'text-amber-400', desc: '大地を揺るがす巨人族のハンマー' },
-            { id: 'w_ssr_claws', name: 'ドラゴンクロー', atk: 920, rarity: 'SSR', icon: '🐾', color: 'text-orange-400', desc: '竜の爪から削り出された格闘武具' },
-            { id: 'w_silver', name: '銀のレイピア', atk: 450, rarity: 'SR', icon: '🗡️', color: 'text-purple-400', desc: 'しなやかで鋭い銀の細身剣' },
-            { id: 'w_sr_axe', name: 'バトルアックス', atk: 410, rarity: 'SR', icon: '🪓', color: 'text-amber-500', desc: '重厚で強力な戦斧' },
-            { id: 'w_sr_dagger', name: 'アサシンダガー', atk: 380, rarity: 'SR', icon: '🗡️', color: 'text-indigo-400', desc: '影に紛れて敵を急襲する暗殺用短剣' },
-            { id: 'w_sr_whip', name: 'スネークウィップ', atk: 350, rarity: 'SR', icon: '🐍', color: 'text-emerald-400', desc: '蛇のようにしなるしなやかな鞭' },
-            { id: 'w_iron', name: '鉄の長剣', atk: 180, rarity: 'R', icon: '⚔️', color: 'text-blue-400', desc: '鍛冶屋特製の丈夫な鉄剣' },
-            { id: 'w_r_spear', name: '騎士の槍', atk: 160, rarity: 'R', icon: '🔱', color: 'text-cyan-400', desc: '突進力に優れた細身の槍' },
-            { id: 'w_r_bow', name: '狩人の弓', atk: 140, rarity: 'R', icon: '🏹', color: 'text-amber-600', desc: '獲物を逃さない木製の長弓' },
-            { id: 'w_bronze', name: '銅の剣', atk: 75, rarity: 'N', icon: '🗡️', color: 'text-gray-300', desc: '冒険者が最初に手にする剣' },
-            { id: 'w_n_dagger', name: '木彫りの短剣', atk: 45, rarity: 'N', icon: '🔪', color: 'text-gray-400', desc: '初心者用の練習用ナイフ' },
-            { id: 'w_n_club', name: 'こんぼう', atk: 30, rarity: 'N', icon: '🪵', color: 'text-amber-800', desc: '木の幹で作られた素朴な武器' }
+        // Gacha Item Pool
+        const gachaPool = [
+            { id: 'kami_sword', name: '全知全能・神光剣', rarity: 'KAMI', rate: 0.0001, atk: 999999, color: 'from-amber-300 via-yellow-400 to-amber-600', stroke: 'border-amber-300', svg: SVGS.kami },
+            { id: 'god_sword', name: '創世覇王の大剣', rarity: 'GOD', rate: 0.0010, atk: 250000, color: 'from-purple-400 to-indigo-600', stroke: 'border-purple-300', svg: SVGS.god },
+            { id: 'ur_spear', name: '炎滅神槍ルシファー', rarity: 'UR', rate: 0.0100, atk: 50000, color: 'from-blue-400 to-cyan-600', stroke: 'border-blue-300', svg: SVGS.ur },
+            { id: 'ssr_sword', name: '光輝の大剣', rarity: 'SSR', rate: 0.0500, atk: 12000, color: 'from-emerald-400 to-teal-600', stroke: 'border-emerald-300', svg: SVGS.ssr },
+            { id: 'sr_wand', name: '詠唱者の杖', rarity: 'SR', rate: 0.1500, atk: 3500, color: 'from-slate-500 to-slate-700', stroke: 'border-slate-400', svg: SVGS.sr },
+            { id: 'r_sword', name: '鋼鉄の大剣', rarity: 'R', rate: 0.2000, atk: 1000, color: 'from-slate-600 to-slate-800', stroke: 'border-slate-500', svg: SVGS.r },
+            { id: 'n_dagger', name: '見習い兵の短剣', rarity: 'N', rate: 0.5889, atk: 100, color: 'from-slate-700 to-slate-900', stroke: 'border-slate-600', svg: SVGS.n }
         ];
 
-        function checkTwoHourReset() {
-            const TWO_HOURS = 2 * 60 * 60 * 1000;
-            const now = Date.now();
-            if (!gameState.lastResetTime) {
-                gameState.lastResetTime = now;
-            }
-            const elapsed = now - gameState.lastResetTime;
+        // Game State Variables
+        let dailyLimit = 600;
+        let equippedItemId = 'n_dagger';
+        let inventory = { 'n_dagger': 1 };
+        let bossMaxHp = 10000000;
+        let bossHp = 10000000;
+        let heroGold = 1000;
+        let heroLevel = 1;
 
-            if (elapsed >= TWO_HOURS) {
-                gameState.sessionPulls = 0;
-                gameState.lastResetTime = now;
-                saveState();
-            }
-
-            const remainingMs = Math.max(0, TWO_HOURS - (elapsed % TWO_HOURS));
-            const remainingSeconds = Math.floor(remainingMs / 1000);
-            
-            const hours = String(Math.floor(remainingSeconds / 3600)).padStart(2, '0');
-            const minutes = String(Math.floor((remainingSeconds % 3600) / 60)).padStart(2, '0');
-            const seconds = String(remainingSeconds % 60).padStart(2, '0');
-            
-            const timerEl = document.getElementById('timer-countdown');
-            if (timerEl) {
-                timerEl.innerText = `${hours}:${minutes}:${seconds}`;
-            }
+        // UI View Switchers
+        function switchTo3DView() {
+            document.getElementById('gachaMainView').classList.add('hidden');
+            document.getElementById('battle3DView').classList.remove('hidden');
+            if (!threeInitialized) init3DScene();
         }
 
-        setInterval(checkTwoHourReset, 1000);
-
-        function loadState() {
-            try {
-                const saved = localStorage.getItem('hero_world_gacha_save');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    Object.assign(gameState, parsed);
-                }
-            } catch(e) { console.error(e); }
-            checkLevelUp();
-            checkTwoHourReset();
-            updateUI();
-        }
-
-        function saveState() {
-            try {
-                localStorage.setItem('hero_world_gacha_save', JSON.stringify(gameState));
-            } catch(e) { console.error(e); }
-        }
-
-        function checkLevelUp() {
-            const nextExp = gameState.level * 1000;
-            if (gameState.exp >= nextExp) {
-                gameState.level += 1;
-                gameState.spins += 50;
-                gameState.diamonds += 20;
-            }
-        }
-
-        function updateUI() {
-            document.getElementById('stat-spins').innerText = gameState.spins;
-            document.getElementById('stat-diamonds').innerText = gameState.diamonds;
-            document.getElementById('stat-exp').innerText = gameState.exp;
-            document.getElementById('stat-level').innerText = gameState.level;
-            document.getElementById('stat-total-pulls').innerText = gameState.totalPulls;
-            document.getElementById('stat-daily-limit').innerText = `${gameState.sessionPulls || 0}/500`;
-            document.getElementById('equipped-weapon-name').innerText = `${gameState.equippedWeapon.name} (攻撃力: ${gameState.equippedWeapon.atk})`;
-            document.getElementById('equipped-icon-box').innerText = gameState.equippedWeapon.icon || '✊';
-        }
-
-        function addSpinsAction() {
-            gameState.spins += 50;
-            saveState();
-            updateUI();
-            openModal('✨ 召喚回数獲得！', '召喚チケットを 50 回分獲得しました！');
-        }
-
-        function toggleAudio() {
-            openModal('🎵 BGM設定', 'ゲームサウンドのオン/オフ切替機能です。');
-        }
-
-        // --- GACHA ACTIONS ---
-        function pullGacha(count) {
-            if (gameState.spins < count) {
-                openModal('召喚回数が不足しています', '「本日の限界突破 (+50回)」ボタンを押して召喚回数を補充してください！');
+        // Animated Gacha Cut-in Execution (Extended Length & Drama)
+        function drawGacha(count) {
+            if (dailyLimit < count) {
+                alert(`本日の召喚可能回数が不足しています！（残り: ${dailyLimit}回）`);
                 return;
             }
 
-            gameState.spins -= count;
-            gameState.totalPulls += count;
-            gameState.sessionPulls = (gameState.sessionPulls || 0) + count;
-            gameState.exp += count * 25;
-            gameState.diamonds += count * 3;
-            checkLevelUp();
+            dailyLimit -= count;
+            document.getElementById('dailyCountText').innerText = `${dailyLimit} / 600`;
 
-            let pulledResults = [];
-            let bestWeaponGot = null;
+            const results = [];
             let highestRarity = 'N';
-            const rarityOrder = { 'GOD': 6, 'UR': 5, 'SSR': 4, 'SR': 3, 'R': 2, 'N': 1 };
 
             for (let i = 0; i < count; i++) {
-                const rand = Math.random() * 100;
-                let item = null;
+                const rand = Math.random();
+                let cum = 0;
+                let picked = gachaPool[gachaPool.length - 1];
 
-                if (rand < 0.2) item = weaponDatabase[0];
-                else if (rand < 0.5) item = weaponDatabase[1];
-                else if (rand < 0.9) item = weaponDatabase[2];
-                else if (rand < 1.4) item = weaponDatabase[3];
-                else if (rand < 1.9) item = weaponDatabase[4];
-                else if (rand < 2.5) item = weaponDatabase[5];
-                else if (rand < 3.5) item = weaponDatabase[6];
-                else if (rand < 4.8) item = weaponDatabase[7];
-                else if (rand < 6.2) item = weaponDatabase[8];
-                else if (rand < 7.6) item = weaponDatabase[9];
-                else if (rand < 9.0) item = weaponDatabase[10];
-                else if (rand < 12.0) item = weaponDatabase[11];
-                else if (rand < 15.0) item = weaponDatabase[12];
-                else if (rand < 18.0) item = weaponDatabase[13];
-                else if (rand < 21.0) item = weaponDatabase[14];
-                else if (rand < 24.0) item = weaponDatabase[15];
-                else if (rand < 31.0) item = weaponDatabase[16];
-                else if (rand < 38.0) item = weaponDatabase[17];
-                else if (rand < 45.0) item = weaponDatabase[18];
-                else if (rand < 52.0) item = weaponDatabase[19];
-                else if (rand < 62.0) item = weaponDatabase[20];
-                else if (rand < 72.0) item = weaponDatabase[21];
-                else if (rand < 82.0) item = weaponDatabase[22];
-                else if (rand < 90.0) item = weaponDatabase[23];
-                else if (rand < 97.0) item = weaponDatabase[24];
-                else item = weaponDatabase[25];
-
-                pulledResults.push(item);
-
-                const itemRarityRank = rarityOrder[item.rarity] || 1;
-                const currentHighestRank = rarityOrder[highestRarity] || 1;
-                if (itemRarityRank > currentHighestRank) {
-                    highestRarity = item.rarity;
-                }
-
-                if (item.atk > 0) {
-                    if (!gameState.inventory.some(inv => inv.id === item.id)) {
-                        gameState.inventory.push({ ...item, type: 'weapon' });
-                    }
-                    if (!bestWeaponGot || item.atk > bestWeaponGot.atk) {
-                        bestWeaponGot = item;
+                for (const item of gachaPool) {
+                    cum += item.rate;
+                    if (rand <= cum) {
+                        picked = item;
+                        break;
                     }
                 }
+                results.push(picked);
+                inventory[picked.id] = (inventory[picked.id] || 0) + 1;
+
+                if (picked.rarity === 'KAMI') highestRarity = 'KAMI';
+                else if (picked.rarity === 'GOD' && highestRarity !== 'KAMI') highestRarity = 'GOD';
+                else if (picked.rarity === 'UR' && !['KAMI', 'GOD'].includes(highestRarity)) highestRarity = 'UR';
             }
 
-            if (bestWeaponGot && bestWeaponGot.atk > gameState.equippedWeapon.atk) {
-                gameState.equippedWeapon = { ...bestWeaponGot, type: 'weapon' };
+            // Play Extended Cut-in Animation Screen
+            const cutin = document.getElementById('cutinOverlay');
+            const cutinText = document.getElementById('cutinText');
+            const cutinSub = document.getElementById('cutinSubText');
+            const cutinBg = document.getElementById('cutinBg');
+
+            cutin.classList.remove('hidden');
+            
+            if (highestRarity === 'KAMI') {
+                cutinSub.innerText = '★★★ LEGENDARY GOD SUMMON ★★★';
+                cutinText.innerText = '【神・降・臨】全知全能の光が世界を包み込む…！！';
+                cutinBg.className = 'absolute inset-0 rainbow-bg bg-gradient-to-r from-yellow-500 via-rose-500 to-indigo-600 flex items-center justify-center';
+            } else if (highestRarity === 'GOD') {
+                cutinSub.innerText = '★★ SUPREME AWAKENING ★★';
+                cutinText.innerText = '【GODレア覚醒】覇王の波動が轟く…！';
+                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-purple-900 via-pink-800 to-indigo-950 flex items-center justify-center';
+            } else if (highestRarity === 'UR') {
+                cutinSub.innerText = '★ ULTRA RARE BREAKTHROUGH ★';
+                cutinText.innerText = '【UR降臨】強力な魔力が召喚陣から溢れ出る！';
+                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 flex items-center justify-center';
+            } else {
+                cutinSub.innerText = 'ALCHEMICAL RITUAL';
+                cutinText.innerText = '古代の錬金魔陣が起動し、エネルギーが収束する…';
+                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-950 flex items-center justify-center';
             }
 
-            saveState();
-            updateUI();
-            
-            playGachaAnimation(highestRarity, () => {
-                showResultModal(pulledResults);
-            });
-        }
-
-        function playGachaAnimation(highestRarity, callback) {
-            const overlay = document.getElementById('gacha-animation-overlay');
-            const orb = document.getElementById('anim-orb');
-            const ring = document.getElementById('anim-ring');
-            const aura = document.getElementById('anim-aura');
-            const text = document.getElementById('gacha-anim-text');
-            const sub = document.getElementById('gacha-anim-sub');
-            const flash = document.getElementById('gacha-flash-bg');
-
-            overlay.classList.remove('hidden');
-            flash.style.opacity = '0';
-            
-            text.innerText = "✨ 異界より召喚陣を展開中... ✨";
-            text.className = "text-2xl md:text-3xl font-black text-amber-300 tracking-wider mt-8 animate-pulse text-center";
-            sub.innerText = "次元の歪みから古代の魔力を呼び覚ます...";
-            orb.innerText = "🔮";
-            orb.className = "w-28 h-28 rounded-full bg-gradient-to-br from-yellow-200 via-amber-400 to-yellow-600 border-4 border-white shadow-[0_0_50px_rgba(251,191,36,0.9)] flex items-center justify-center text-4xl animate-bounce transform transition-all duration-700 scale-90 opacity-70";
-            ring.className = "absolute inset-0 border-4 border-dashed border-amber-400 rounded-full animate-spin-seal opacity-60";
-
+            // Longer wait time (2.6 seconds) for high excitement
             setTimeout(() => {
-                text.innerText = "⚡ 竜の波動が高まっている... ⚡";
-                sub.innerText = "強大なエネルギーが中央のオーブに凝縮される！";
-                orb.className = "w-32 h-32 rounded-full bg-gradient-to-br from-cyan-300 via-blue-500 to-purple-600 border-4 border-cyan-100 shadow-[0_0_70px_rgba(59,130,246,0.9)] flex items-center justify-center text-5xl animate-pulse transform transition-all duration-700 scale-110 opacity-100";
-                aura.className = "absolute w-64 h-64 bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-600 rounded-full blur-2xl opacity-80 animate-spin";
-            }, 1200);
-
-            setTimeout(() => {
-                text.innerText = "💥 次元の壁が崩壊！ 💥";
-                sub.innerText = "神々の武具が実体化を開始！";
-                ring.className = "absolute inset-0 border-4 border-dashed border-rose-400 rounded-full animate-spin opacity-100 duration-300";
-                orb.className = "w-36 h-36 rounded-full bg-gradient-to-br from-yellow-100 via-rose-500 to-purple-900 border-4 border-yellow-200 shadow-[0_0_90px_rgba(244,63,94,1)] flex items-center justify-center text-6xl animate-ping transform transition-all duration-300 scale-125";
+                cutin.classList.add('hidden');
+                showResults(results);
             }, 2600);
-
-            setTimeout(() => {
-                flash.style.opacity = '1';
-                setTimeout(() => flash.style.opacity = '0', 300);
-
-                if (highestRarity === 'GOD') {
-                    text.innerText = "⚡ 【 GOD 】 全次元創世・神威降臨 ⚡";
-                    text.className = "text-3xl md:text-5xl font-black text-rose-400 tracking-widest mt-8 text-center animate-bounce drop-shadow-[0_0_35px_rgba(244,63,94,1)]";
-                    sub.innerText = "世界を穿つ伝説の神具を獲得！！";
-                    orb.innerText = "🌌";
-                    orb.className = "w-40 h-40 rounded-full bg-gradient-to-br from-rose-400 via-purple-600 to-rose-900 border-4 border-rose-100 shadow-[0_0_120px_rgba(244,63,94,1)] flex items-center justify-center text-7xl animate-pulse transform transition-all scale-150";
-                } else if (highestRarity === 'UR') {
-                    text.innerText = "👑 【 UR 】 虹色の聖光降臨 👑";
-                    text.className = "text-3xl md:text-4xl font-black text-amber-300 tracking-wider mt-8 text-center animate-bounce drop-shadow-[0_0_25px_rgba(251,191,36,1)]";
-                    sub.innerText = "王家を護る強大な秘宝が解き放たれた！";
-                    orb.innerText = "⚔️";
-                    orb.className = "w-36 h-36 rounded-full bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-700 border-4 border-amber-100 shadow-[0_0_90px_rgba(251,191,36,1)] flex items-center justify-center text-6xl animate-bounce transform transition-all scale-135";
-                } else if (highestRarity === 'SSR') {
-                    text.innerText = "🌟 【 SSR 】 黄金の覚醒 🌟";
-                    text.className = "text-2xl md:text-3xl font-black text-yellow-300 tracking-wider mt-8 text-center";
-                    sub.innerText = "名立たる英雄たちの名剣を手に入れた！";
-                    orb.innerText = "🔱";
-                    orb.className = "w-32 h-32 rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 border-4 border-white shadow-[0_0_60px_rgba(250,204,21,0.9)] flex items-center justify-center text-5xl animate-pulse";
-                } else {
-                    text.innerText = "✨ 召喚完了！ ✨";
-                    sub.innerText = "新たな装備品を獲得しました。";
-                }
-            }, 3800);
-
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                if (callback) callback();
-            }, 5200);
         }
 
-        function showResultModal(items) {
-            const resultGrid = document.getElementById('result-grid');
-            resultGrid.innerHTML = '';
-            
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-gray-800/90 border border-amber-500/30 rounded-xl p-2 flex flex-col items-center text-center shadow";
-                
-                let rarityBg = "bg-gray-700 text-gray-200";
-                if (item.rarity === 'GOD') rarityBg = "bg-rose-600 text-white font-extrabold animate-pulse";
-                else if (item.rarity === 'UR') rarityBg = "bg-amber-500 text-gray-950 font-black";
-                else if (item.rarity === 'SSR') rarityBg = "bg-yellow-400 text-gray-950 font-bold";
-                else if (item.rarity === 'SR') rarityBg = "bg-purple-600 text-white font-bold";
-                else if (item.rarity === 'R') rarityBg = "bg-blue-600 text-white font-medium";
+        // Display Gacha Result Modal with Sequential Reveal Animation
+        function showResults(items) {
+            const grid = document.getElementById('resultGrid');
+            if (!grid) return;
 
+            grid.innerHTML = '';
+            openModal('resultModal');
+
+            items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-800/90 border border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 shadow-lg opacity-0 transform scale-50 transition-all duration-300';
                 card.innerHTML = `
-                    <div class="text-2xl mb-1">${item.icon || '⚔️'}</div>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded ${rarityBg} mb-1">${item.rarity}</span>
-                    <span class="text-[10px] font-bold text-gray-100 truncate w-full">${item.name}</span>
-                    <span class="text-[9px] text-rose-300">ATK +${item.atk}</span>
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${item.color} p-2 flex items-center justify-center shadow-md border border-white/20">
+                        ${item.svg}
+                    </div>
+                    <div class="text-xs font-black text-amber-400 mt-1">[${item.rarity}]</div>
+                    <div class="text-xs font-bold text-white truncate w-full text-center">${item.name}</div>
+                    <div class="text-[10px] text-slate-400">攻撃力 +${item.atk.toLocaleString()}</div>
                 `;
-                resultGrid.appendChild(card);
+                grid.appendChild(card);
+
+                // Sequential stagger popup effect
+                setTimeout(() => {
+                    card.classList.remove('opacity-0', 'scale-50');
+                    card.classList.add('opacity-100', 'scale-100');
+                }, index * Math.min(100, 1500 / items.length));
+            });
+        }
+
+        // Equip Item Logic
+        function equipItem(id) {
+            const item = gachaPool.find(g => g.id === id);
+            if (!item) return;
+
+            equippedItemId = id;
+            document.getElementById('equipName').innerText = item.name;
+            document.getElementById('equipAtk').innerText = item.atk.toLocaleString();
+            
+            const iconBox = document.getElementById('equipIconBox');
+            iconBox.className = `w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} p-2.5 flex items-center justify-center shadow-2xl border-2 border-white/30 shrink-0 transform hover:scale-105 transition`;
+            iconBox.innerHTML = item.svg;
+
+            updateInventoryUI();
+        }
+
+        // Render Inventory List UI
+        function updateInventoryUI() {
+            const container = document.getElementById('inventoryList');
+            if (!container) return;
+
+            const items = Object.keys(inventory).map(id => {
+                const item = gachaPool.find(g => g.id === id);
+                return { ...item, count: inventory[id] };
             });
 
-            document.getElementById('result-modal').classList.remove('hidden');
+            container.innerHTML = items.map(item => {
+                const isEquipped = item.id === equippedItemId;
+                return `
+                <div class="flex items-center justify-between p-3 bg-slate-800/80 rounded-2xl border ${isEquipped ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700'}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${item.color} p-2 flex items-center justify-center shadow-md border border-white/20 shrink-0">
+                            ${item.svg}
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                ${item.name}
+                                ${isEquipped ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded">装備中</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-amber-400">ATK +${item.atk.toLocaleString()} (所持: x${item.count})</div>
+                        </div>
+                    </div>
+                    <button onclick="equipItem('${item.id}')" ${isEquipped ? 'disabled' : ''} 
+                        class="px-3 py-1.5 text-xs font-bold rounded-xl transition ${isEquipped ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 hover:brightness-110 shadow-md'}">
+                        ${isEquipped ? '装備中' : '装備する'}
+                    </button>
+                </div>
+            `;
+            }).join('');
         }
 
-        function closeResultModal() {
-            document.getElementById('result-modal').classList.add('hidden');
-        }
+        // 3D Battle Action Attacks & Popups
+        function trigger3DAttack(multiplier = 1) {
+            const equipped = gachaPool.find(g => g.id === equippedItemId);
+            const baseDamage = equipped ? equipped.atk : 100;
+            const damage = Math.floor(baseDamage * (0.9 + Math.random() * 0.2) * multiplier);
 
-        function openRatesModal() {
-            document.getElementById('rates-modal').classList.remove('hidden');
-        }
-
-        function closeRatesModal() {
-            document.getElementById('rates-modal').classList.add('hidden');
-        }
-
-        function openModal(title, text) {
-            document.getElementById('modal-title').innerText = title;
-            document.getElementById('modal-body').innerText = text;
-            document.getElementById('generic-modal').classList.remove('hidden');
-        }
-
-        function closeGenericModal() {
-            document.getElementById('generic-modal').classList.add('hidden');
-        }
-
-        function openGenericModal(type) {
-            if (type === 'modal-stats') {
-                let text = "【所有装備一覧】\n";
-                gameState.inventory.forEach(inv => {
-                    text += `・[${inv.rarity}] ${inv.name} (攻撃力: ${inv.atk})\n`;
-                });
-                openModal('所持装備一覧', text);
-            } else if (type === 'modal-local') {
-                openModal('ダンジョン機能', '古代の試練ダンジョンに挑戦して、大量のダイヤを獲得できます！（準備中）');
-            } else if (type === 'modal-tasks') {
-                openModal('勇者クエスト', '・ガチャを10回引く（達成！）\n・魔王を撃破する（挑戦中）\n報酬: 竜のダイヤ+100');
-            } else if (type === 'modal-trade') {
-                openModal('錬金所', '不要な装備を分解して錬金素材やダイヤに変換できます。');
-            } else if (type === 'modal-live') {
-                openModal('魔王城ライブカメラ', '魔王城の動向をリアルタイム観測中... 魔王が勇者の襲来を警戒しています！');
-            } else if (type === 'modal-daily') {
-                gameState.diamonds += 50;
-                gameState.spins += 30;
-                saveState();
-                updateUI();
-                openModal('🎁 デイリー報酬獲得！', '本日の特別ボーナス！\n・竜のダイヤ +50個\n・召喚回数 +30回 を受取りました！');
-            } else if (type === 'modal-shop') {
-                openModal('🛒 道具屋・ショップ', '・攻撃力強化ポーション (100ダイヤ)\n・召喚50回チケット (150ダイヤ)\nショップにて絶賛販売中！');
-            } else if (type === 'modal-dex') {
-                const sortedDb = [...weaponDatabase].sort((a, b) => b.atk - a.atk);
-                let text = "【図鑑 - レア度高順】\n";
-                sortedDb.forEach(w => {
-                    const owned = gameState.inventory.some(inv => inv.id === w.id) ? '✅ 所持済' : '🔒 未解放';
-                    text += `${w.icon} [${w.rarity}] ${w.name} (ATK: ${w.atk}) - ${owned}\n`;
-                });
-                openModal('📖 全装備図鑑', text);
-            } else if (type === 'modal-updates') {
-                openModal('⚙️ 設定＆アップデート', 'バージョン: v3.6.0\n3D視点回転機能＆全機能完全実装！');
-            } else if (type === 'modal-menu') {
-                openModal('📋 メニュー', 'ゲームデータをブラウザのローカルストレージに自動保存しています。');
-            }
-        }
-
-        // --- 3D OPEN WORLD BATTLE SYSTEM ---
-        let threeScene, threeCamera, threeRenderer, animationFrameId;
-        let heroMesh, bossMesh;
-        let bossHp = 10000;
-        let playerHp = 1000;
-        let bossBullets = [];
-        let lastBossHitTime = 0;
-        let is3DActive = false;
-
-        // Camera Orbit Controls State
-        let cameraAngleX = 0;
-        let cameraAngleY = 0.4; // Radiant elevation
-        let cameraDistance = 22;
-
-        const battleState = {
-            keys: { Up: false, Down: false, Left: false, Right: false },
-            isJumping: false,
-            jumpVelocity: 0
-        };
-
-        function openWorldAdventure() {
-            close3DWorldCleanup();
-
-            is3DActive = true;
-            document.getElementById('world-3d-modal').classList.remove('hidden');
-            document.getElementById('3d-weapon-name').innerText = gameState.equippedWeapon.name;
-            document.getElementById('3d-weapon-atk').innerText = gameState.equippedWeapon.atk;
-            document.getElementById('3d-kill-count').innerText = gameState.bossKills || 0;
-
-            init3DWorld();
-        }
-
-        function close3DWorldCleanup() {
-            is3DActive = false;
-
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-
-            if (threeScene) {
-                if (bossBullets && bossBullets.length > 0) {
-                    bossBullets.forEach(b => {
-                        if (b.geometry) b.geometry.dispose();
-                        if (b.material) b.material.dispose();
-                        threeScene.remove(b);
-                    });
-                }
-                if (heroMesh) {
-                    if (heroMesh.geometry) heroMesh.geometry.dispose();
-                    if (heroMesh.material) heroMesh.material.dispose();
-                    threeScene.remove(heroMesh);
-                }
-                if (bossMesh) {
-                    if (bossMesh.geometry) bossMesh.geometry.dispose();
-                    if (bossMesh.material) bossMesh.material.dispose();
-                    threeScene.remove(bossMesh);
-                }
-            }
-            bossBullets = [];
-            heroMesh = null;
-            bossMesh = null;
-
-            if (threeRenderer) {
-                try {
-                    threeRenderer.dispose();
-                } catch(e){}
-                threeRenderer = null;
-            }
-            threeScene = null;
-            threeCamera = null;
-
-            battleState.keys.Up = false;
-            battleState.keys.Down = false;
-            battleState.keys.Left = false;
-            battleState.keys.Right = false;
-            battleState.isJumping = false;
-            battleState.jumpVelocity = 0;
-
-            const holder = document.getElementById('threejs-canvas-holder');
-            if (holder) {
-                while (holder.firstChild) {
-                    holder.removeChild(holder.firstChild);
-                }
-            }
-        }
-
-        function close3DWorld() {
-            close3DWorldCleanup();
-            document.getElementById('world-3d-modal').classList.add('hidden');
-        }
-
-        function triggerJump() {
-            if (!battleState.isJumping && heroMesh && is3DActive) {
-                battleState.isJumping = true;
-                battleState.jumpVelocity = 0.55;
-            }
-        }
-
-        function init3DWorld() {
-            const holder = document.getElementById('threejs-canvas-holder');
-            if (!holder) return;
-
-            threeScene = new THREE.Scene();
-            threeScene.background = new THREE.Color(0x0c061a);
-            threeScene.fog = new THREE.FogExp2(0x0c061a, 0.02);
-
-            threeCamera = new THREE.PerspectiveCamera(60, holder.clientWidth / holder.clientHeight, 0.1, 1000);
-
-            threeRenderer = new THREE.WebGLRenderer({ antialias: true });
-            threeRenderer.setSize(holder.clientWidth, holder.clientHeight);
-            holder.appendChild(threeRenderer.domElement);
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            threeScene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xfabf24, 0.9);
-            dirLight.position.set(20, 40, 20);
-            threeScene.add(dirLight);
-
-            // Ground grid
-            const gridHelper = new THREE.GridHelper(100, 40, 0xd97706, 0x4c1d95);
-            threeScene.add(gridHelper);
-
-            // Player Hero
-            const heroGeo = new THREE.BoxGeometry(1.2, 1.8, 1.2);
-            const heroMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 });
-            heroMesh = new THREE.Mesh(heroGeo, heroMat);
-            heroMesh.position.set(0, 0.9, 8);
-            threeScene.add(heroMesh);
-
-            // Demon King Boss
-            const bossGeo = new THREE.DodecahedronGeometry(3, 1);
-            const bossMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.2, wireframe: false });
-            bossMesh = new THREE.Mesh(bossGeo, bossMat);
-            bossMesh.position.set(0, 3, -15);
-            threeScene.add(bossMesh);
-
-            bossHp = 10000;
-            playerHp = 1000;
-            bossBullets = [];
-            lastBossHitTime = 0;
+            bossHp = Math.max(0, bossHp - damage);
             
-            // Reset camera angles
-            cameraAngleX = 0;
-            cameraAngleY = 0.4;
+            const percent = (bossHp / bossMaxHp) * 100;
+            document.getElementById('bossHpBar').style.width = `${percent}%`;
+            document.getElementById('bossHpText').innerText = `${bossHp.toLocaleString()} / ${bossMaxHp.toLocaleString()}`;
 
-            updateHpBars();
-            setupControls(holder);
-            
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            animationFrameId = requestAnimationFrame(animate3D);
-        }
-
-        function updateHpBars() {
-            const bossHpEl = document.getElementById('boss-hp');
-            if (bossHpEl) bossHpEl.innerText = bossHp;
-
-            const bossHpBigEl = document.getElementById('boss-hp-big');
-            if (bossHpBigEl) bossHpBigEl.innerText = `${bossHp} / 10000`;
-
-            const bossHpBar = document.getElementById('boss-hp-bar');
-            if (bossHpBar) {
-                const bossPercent = Math.max(0, Math.min(100, (bossHp / 10000) * 100));
-                bossHpBar.style.width = `${bossPercent}%`;
+            // Floating Damage Number
+            const layer = document.getElementById('damageLayer');
+            if (layer) {
+                const pop = document.createElement('div');
+                pop.className = 'damage-pop text-2xl sm:text-4xl';
+                pop.style.left = `${35 + Math.random() * 30}%`;
+                pop.style.top = `${30 + Math.random() * 20}%`;
+                pop.innerText = `-${damage.toLocaleString()}!`;
+                layer.appendChild(pop);
+                setTimeout(() => pop.remove(), 800);
             }
 
-            const playerHpEl = document.getElementById('player-hp');
-            if (playerHpEl) playerHpEl.innerText = playerHp;
-
-            const playerHpBar = document.getElementById('player-hp-bar');
-            if (playerHpBar) {
-                const playerPercent = Math.max(0, Math.min(100, (playerHp / 1000) * 100));
-                playerHpBar.style.width = `${playerPercent}%`;
-            }
-        }
-
-        // --- 3D CONTROLS & CAMERA ROTATION SYSTEM ---
-        function setupControls(holder) {
-            // 右クリック時にブラウザのコンテキストメニューが出るのを防ぐ
-            holder.oncontextmenu = (e) => {
-                e.preventDefault();
-                return false;
-            };
-
-            window.onkeydown = (e) => {
-                if (!is3DActive) return;
-                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') battleState.keys.Up = true;
-                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') battleState.keys.Down = true;
-                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') battleState.keys.Left = true;
-                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') battleState.keys.Right = true;
-                if (e.key === ' ' || e.code === 'Space') {
-                    e.preventDefault();
-                    triggerJump();
-                }
-            };
-
-            window.onkeyup = (e) => {
-                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') battleState.keys.Up = false;
-                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') battleState.keys.Down = false;
-                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') battleState.keys.Left = false;
-                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') battleState.keys.Right = false;
-            };
-
-            // Mouse / Touch Camera Rotation (360 Orbit)
-            let isDragging = false;
-            let prevMouseX = 0;
-            let prevMouseY = 0;
-
-            const onPointerDown = (clientX, clientY) => {
-                isDragging = true;
-                prevMouseX = clientX;
-                prevMouseY = clientY;
-            };
-
-            const onPointerMove = (clientX, clientY) => {
-                if (!isDragging) return;
-                const deltaX = clientX - prevMouseX;
-                const deltaY = clientY - prevMouseY;
-
-                cameraAngleX -= deltaX * 0.008;
-                cameraAngleY += deltaY * 0.008;
-
-                // Restrict vertical angle to prevent flipping
-                cameraAngleY = Math.max(0.1, Math.min(Math.PI / 2.2, cameraAngleY));
-
-                prevMouseX = clientX;
-                prevMouseY = clientY;
-            };
-
-            const onPointerUp = () => {
-                isDragging = false;
-            };
-
-            // Mouse Events
-            holder.onmousedown = (e) => onPointerDown(e.clientX, e.clientY);
-            window.onmousemove = (e) => {
-                if (is3DActive) onPointerMove(e.clientX, e.clientY);
-            };
-            window.onmouseup = () => onPointerUp();
-
-            // Touch Events
-            holder.ontouchstart = (e) => {
-                if (e.touches.length > 0) {
-                    onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            };
-            window.ontouchmove = (e) => {
-                if (is3DActive && e.touches.length > 0) {
-                    onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
-                }
-            };
-            window.ontouchend = () => onPointerUp();
-        }
-
-        // --- MAIN 3D ANIMATION & BATTLE LOOP ---
-        function animate3D(timestamp) {
-            if (!is3DActive || !threeScene || !threeCamera || !threeRenderer) return;
-
-            animationFrameId = requestAnimationFrame(animate3D);
-
-            const speed = 0.35;
-
-            // Hero Movement Logic
-            if (heroMesh) {
-                if (battleState.keys.Up) heroMesh.position.z -= speed;
-                if (battleState.keys.Down) heroMesh.position.z += speed;
-                if (battleState.keys.Left) heroMesh.position.x -= speed;
-                if (battleState.keys.Right) heroMesh.position.x += speed;
-
-                // Restrict Player Area Boundaries
-                heroMesh.position.x = Math.max(-35, Math.min(35, heroMesh.position.x));
-                heroMesh.position.z = Math.max(-35, Math.min(35, heroMesh.position.z));
-
-                // Jump Physics
-                if (battleState.isJumping) {
-                    heroMesh.position.y += battleState.jumpVelocity;
-                    battleState.jumpVelocity -= 0.035;
-
-                    if (heroMesh.position.y <= 0.9) {
-                        heroMesh.position.y = 0.9;
-                        battleState.isJumping = false;
-                        battleState.jumpVelocity = 0;
-                    }
-                }
-            }
-
-            // Boss Rotation & Dynamic Animation
             if (bossMesh) {
-                bossMesh.rotation.y += 0.02;
-                bossMesh.rotation.x += 0.01;
-
-                // Boss Bullet Firing Pattern
-                if (Math.random() < 0.05) {
-                    const bulletGeo = new THREE.SphereGeometry(0.5, 8, 8);
-                    const bulletMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
-                    const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-
-                    bullet.position.copy(bossMesh.position);
-
-                    // Shoot towards player
-                    const dir = new THREE.Vector3();
-                    if (heroMesh) {
-                        dir.subVectors(heroMesh.position, bossMesh.position).normalize();
-                    } else {
-                        dir.set(0, 0, 1);
-                    }
-                    bullet.userData = { dir: dir, speed: 0.45 };
-
-                    threeScene.add(bullet);
-                    bossBullets.push(bullet);
-                }
+                bossMesh.scale.set(1.4, 1.4, 1.4);
+                setTimeout(() => bossMesh.scale.set(1, 1, 1), 120);
             }
 
-            // Move Boss Bullets & Collision Check with Player
-            for (let i = bossBullets.length - 1; i >= 0; i--) {
-                const b = bossBullets[i];
-                b.position.addScaledVector(b.userData.dir, b.userData.speed);
-
-                // Check collision with Hero
-                if (heroMesh && b.position.distanceTo(heroMesh.position) < 1.4) {
-                    threeScene.remove(b);
-                    if (b.geometry) b.geometry.dispose();
-                    if (b.material) b.material.dispose();
-                    bossBullets.splice(i, 1);
-
-                    playerHp = Math.max(0, playerHp - 40);
-                    updateHpBars();
-
-                    if (playerHp <= 0) {
-                        close3DWorld();
-                        openModal('☠️ 戦闘敗北...', '魔王の強大な力に屈してしまった... 武器を強化して再挑戦しよう！');
-                        return;
-                    }
-                    continue;
-                }
-
-                // Remove out-of-bounds bullets
-                if (b.position.distanceTo(bossMesh.position) > 80) {
-                    threeScene.remove(b);
-                    if (b.geometry) b.geometry.dispose();
-                    if (b.material) b.material.dispose();
-                    bossBullets.splice(i, 1);
-                }
-            }
-
-            // Player Attack Collision Check with Demon King Boss
-            if (heroMesh && bossMesh && bossHp > 0) {
-                const distToBoss = heroMesh.position.distanceTo(bossMesh.position);
-                const now = Date.now();
-
-                // Hit when close (Melee Range < 6 units) with 0.3s cooldown
-                if (distToBoss < 6.0 && now - lastBossHitTime > 300) {
-                    lastBossHitTime = now;
-                    const damage = gameState.equippedWeapon.atk || 10;
-                    bossHp = Math.max(0, bossHp - damage);
-
-                    // Hit Flash Visual Effect
-                    bossMesh.material.color.setHex(0xffffff);
-                    setTimeout(() => {
-                        if (bossMesh && bossMesh.material) bossMesh.material.color.setHex(0xe11d48);
-                    }, 120);
-
-                    updateHpBars();
-
-                    // Boss Defeat Victory Handler
-                    if (bossHp <= 0) {
-                        gameState.bossKills = (gameState.bossKills || 0) + 1;
-                        gameState.diamonds += 100;
-                        gameState.exp += 500;
-                        checkLevelUp();
-                        saveState();
-                        updateUI();
-
-                        close3DWorld();
-                        openModal('🎉 魔王完全撃破！', `【討伐成功！】\n魔王を見事に討伐しました！\n\n🎁 報酬:\n・竜のダイヤ +100個\n・経験値 +500 EXP`);
-                        return;
-                    }
-                }
-            }
-
-            // Smooth Orbit Camera Movement around Hero
-            if (heroMesh) {
-                const camX = heroMesh.position.x + cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
-                const camY = heroMesh.position.y + cameraDistance * Math.sin(cameraAngleY);
-                const camZ = heroMesh.position.z + cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
-
-                threeCamera.position.set(camX, camY, camZ);
-                threeCamera.lookAt(heroMesh.position.x, heroMesh.position.y + 1.0, heroMesh.position.z);
-            }
-
-            threeRenderer.render(threeScene, threeCamera);
+            // Reward Gold & EXP
+            heroGold += Math.floor(damage / 100);
+            document.getElementById('goldText').innerText = `${heroGold.toLocaleString()} G`;
         }
 
-        // Initialize state on DOM Ready
-        window.onload = function() {
-            loadState();
-        };
+        function triggerSpecialAttack() {
+            trigger3DAttack(5);
+        }
+
+        // Initialize Default Equipment UI
+        window.addEventListener('DOMContentLoaded', () => {
+            equipItem('n_dagger');
+        });
+
+        // Three.js 3D Open World Engine setup
+        let threeInitialized = false;
+        let scene, camera, renderer, bossMesh;
+        let isMouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let cameraAngleX = 0, cameraAngleY = 0.3;
+
+        function init3DScene() {
+            threeInitialized = true;
+            const container = document.getElementById('canvas3d');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x090d16);
+            scene.fog = new THREE.FogExp2(0x090d16, 0.015);
+
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xf59e0b, 1.5);
+            dirLight.position.set(20, 40, 20);
+            scene.add(dirLight);
+
+            // Terrain Ground
+            const groundGeo = new THREE.PlaneGeometry(100, 100, 32, 32);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, wireframe: true });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+
+            // Boss Mesh
+            const bossGeo = new THREE.DodecahedronGeometry(3.5, 1);
+            const bossMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8, roughness: 0.2 });
+            bossMesh = new THREE.Mesh(bossGeo, bossMat);
+            bossMesh.position.set(0, 4, 0);
+            scene.add(bossMesh);
+
+            // Orbit Controls
+            const onMove = (x, y) => {
+                if (!isMouseDown) return;
+                const dx = x - mouseX;
+                const dy = y - mouseY;
+                cameraAngleX -= dx * 0.008;
+                cameraAngleY = Math.max(0.1, Math.min(Math.PI / 2.2, cameraAngleY + dy * 0.008));
+                mouseX = x;
+                mouseY = y;
+            };
+
+            container.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
+            window.addEventListener('mouseup', () => isMouseDown = false);
+            container.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isMouseDown = true;
+                    mouseX = e.touches[0].clientX;
+                    mouseY = e.touches[0].clientY;
+                }
+            });
+            window.addEventListener('touchend', () => isMouseDown = false);
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            });
+
+            container.addEventListener('click', () => trigger3DAttack(1));
+
+            // Animation Render Loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                if (bossMesh) {
+                    bossMesh.rotation.y += 0.01;
+                    bossMesh.rotation.x += 0.005;
+                }
+
+                const dist = 18;
+                camera.position.x = dist * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+                camera.position.z = dist * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+                camera.position.y = dist * Math.sin(cameraAngleY);
+                camera.lookAt(0, 3, 0);
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
     </script>
 </body>
 </html>
