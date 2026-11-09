@@ -3,726 +3,795 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>勇者の世界ガチャ & 3DオープンワールドRPG</title>
+    <title>ピカピカ歯科クリニック - 歯医者さん経営シミュレーション</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Three.js for 3D graphics -->
+    <!-- Three.js for 3D Clinic View -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             user-select: none;
             -webkit-user-select: none;
-        }
-        
-        /* Continuously Rotating Magic Circle Animations */
-        @keyframes rotateClockwise {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        @keyframes rotateCounterClockwise {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(-360deg); }
-        }
-        @keyframes magicPulse {
-            0%, 100% { filter: drop-shadow(0 0 12px rgba(234, 179, 8, 0.7)); }
-            50% { filter: drop-shadow(0 0 24px rgba(236, 72, 153, 0.9)); }
+            overflow: hidden; /* Fullscreen 3D Canvas */
         }
 
-        .spin-outer {
-            animation: rotateClockwise 35s linear infinite;
-            transform-origin: center;
-        }
-        .spin-mid {
-            animation: rotateCounterClockwise 25s linear infinite;
-            transform-origin: center;
-        }
-        .spin-inner {
-            animation: rotateClockwise 15s linear infinite;
-            transform-origin: center;
-        }
-        .magic-pulse {
-            animation: magicPulse 4s ease-in-out infinite;
-        }
-
-        /* Detailed Alchemical Magic Circle SVG Rendering Style */
-        .alchemical-circle {
-            background: radial-gradient(circle, rgba(20, 10, 30, 0.95) 0%, rgba(5, 3, 10, 0.98) 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 25px rgba(234, 179, 8, 0.5), inset 0 0 25px rgba(168, 85, 247, 0.6);
-        }
-
-        /* Cut-in Gacha Animation */
-        @keyframes rainbowShine {
-            0% { filter: hue-rotate(0deg); }
-            100% { filter: hue-rotate(360deg); }
-        }
-        .rainbow-bg {
-            animation: rainbowShine 3s linear infinite;
-        }
-
-        /* Damage Text Floating Animation */
-        @keyframes floatUpDamage {
+        /* Money float animation */
+        @keyframes floatMoney {
             0% { opacity: 1; transform: translateY(0) scale(1); }
-            50% { opacity: 1; transform: translateY(-40px) scale(1.4); }
+            50% { opacity: 1; transform: translateY(-40px) scale(1.3); }
             100% { opacity: 0; transform: translateY(-80px) scale(1); }
         }
-        .damage-pop {
+        .money-pop {
             position: absolute;
             pointer-events: none;
             font-weight: 900;
-            color: #facc15;
-            text-shadow: 0 0 10px #ef4444, 2px 2px 0 #000;
-            animation: floatUpDamage 0.8s ease-out forwards;
+            color: #10b981;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8), 0 0 12px rgba(52, 211, 153, 0.8);
+            animation: floatMoney 1.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
             z-index: 50;
+        }
+
+        /* Glassmorphism UI Panels */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        /* Virtual D-Pad Touch Buttons */
+        .dpad-btn {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(20, 184, 166, 0.4);
+            color: #2dd4bf;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .dpad-btn:active {
+            background: #14b8a6;
+            color: #0f172a;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-12">
+<body class="bg-slate-950 text-slate-100 w-screen h-screen relative">
 
-    <!-- Top Header Navigation & Status Bar -->
-    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-40 px-4 py-3 shadow-lg">
-        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center border border-slate-700 text-amber-400">
-                    <i class="fa-solid fa-crown text-amber-400"></i>
+    <!-- 3D WebGL Canvas Layer (Fullscreen Viewport) -->
+    <div id="canvas3d" class="w-full h-full absolute inset-0 z-0 cursor-grab active:cursor-grabbing"></div>
+
+    <!-- Money Popup Effect Layer -->
+    <div id="moneyLayer" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
+
+    <!-- Mobile Virtual Controller (Left-Bottom) -->
+    <div class="fixed bottom-6 left-6 z-40 pointer-events-auto flex flex-col items-center gap-1">
+        <div class="text-[10px] text-teal-400 font-extrabold mb-1 bg-slate-900/80 px-2 py-0.5 rounded-full border border-teal-500/30">
+            <i class="fa-solid fa-person-walking mr-1"></i>医者を操作
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 w-32 h-32">
+            <div></div>
+            <button id="btnUp" class="dpad-btn text-lg"><i class="fa-solid fa-arrow-up"></i></button>
+            <div></div>
+            <button id="btnLeft" class="dpad-btn text-lg"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="flex items-center justify-center text-[10px] text-slate-500 font-bold">MOVE</div>
+            <button id="btnRight" class="dpad-btn text-lg"><i class="fa-solid fa-arrow-right"></i></button>
+            <div></div>
+            <button id="btnDown" class="dpad-btn text-lg"><i class="fa-solid fa-arrow-down"></i></button>
+            <div></div>
+        </div>
+    </div>
+
+    <!-- UI Overlay Layer -->
+    <div class="absolute inset-0 z-10 flex flex-col justify-between p-4 pointer-events-none">
+
+        <!-- Top Navigation Header -->
+        <header class="flex flex-wrap items-center justify-between gap-3 max-w-6xl mx-auto w-full pointer-events-auto">
+            <div class="glass-panel rounded-2xl px-5 py-3 flex items-center gap-3 shadow-2xl">
+                <div class="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center text-teal-950 shadow-lg font-black text-xl">
+                    <i class="fa-solid fa-user-doctor"></i>
                 </div>
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-shield-halved text-amber-400 text-xl"></i>
-                    <h1 class="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-                        超・勇者の世界ガチャRPG
+                <div>
+                    <h1 class="font-black text-lg text-teal-100 flex items-center gap-2">
+                        フル3D 歯科クリニック
+                        <span class="text-[10px] bg-teal-500/30 text-teal-300 border border-teal-400/30 px-2 py-0.5 rounded-full">WALKABLE 3D</span>
                     </h1>
+                    <p class="text-[11px] text-slate-400">WASD / 矢印キー / 左下ボタンで医者を操作！</p>
                 </div>
             </div>
 
-            <!-- Currency & Stats -->
-            <div class="flex items-center gap-3 text-xs sm:text-sm">
-                <div class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-1.5">
-                    <i class="fa-solid fa-coins text-yellow-400"></i>
-                    <span id="goldText" class="font-bold text-amber-300">1,000 G</span>
+            <div class="flex items-center gap-3">
+                <div class="glass-panel rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-xl">
+                    <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold">資金</div>
+                        <div id="moneyText" class="font-black text-emerald-400 text-base">100,000 円</div>
+                    </div>
                 </div>
-                <div class="bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 flex items-center gap-2">
-                    <i class="fa-solid fa-bolt text-yellow-400"></i>
-                    <span class="font-bold">Lv.<span id="heroLevelText">1</span></span>
+                <div class="glass-panel rounded-2xl px-4 py-2.5 flex items-center gap-2.5 shadow-xl">
+                    <i class="fa-solid fa-star text-amber-400 text-lg"></i>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold">評判</div>
+                        <div id="reputationText" class="font-black text-amber-300 text-base">★ 1.0</div>
+                    </div>
                 </div>
-                <button onclick="resetDailyLimit()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-rotate text-amber-400"></i>
-                    <span>召喚回復</span>
-                </button>
+            </div>
+        </header>
+
+        <!-- Chair Selector Switch Bar (Top-Middle) -->
+        <div class="max-w-xl mx-auto w-full pointer-events-auto my-2 flex justify-center">
+            <div id="chairSelectorContainer" class="flex items-center gap-1.5 glass-panel p-2 rounded-2xl border border-teal-500/30 shadow-xl">
+                <!-- Dynamically generated chair selection buttons -->
             </div>
         </div>
-    </header>
 
-    <!-- Main Content Area -->
-    <main class="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-6">
+        <!-- Bottom Action Controls -->
+        <footer class="flex items-end justify-between max-w-6xl mx-auto w-full pointer-events-auto">
+            
+            <!-- Controls Hint -->
+            <div class="glass-panel rounded-2xl px-4 py-3 text-xs text-slate-300 flex items-center gap-3">
+                <i class="fa-solid fa-street-view text-teal-400 text-xl"></i>
+                <div>
+                    <div class="font-bold text-teal-200">操作方法</div>
+                    <div class="text-[11px] text-slate-400">移動: WASD/矢印キー/左下ボタン | カメラ: ドラッグ</div>
+                </div>
+            </div>
 
-        <!-- Gacha Main View Wrapper -->
-        <div id="gachaMainView" class="flex flex-col gap-6">
-            <!-- 1. 最強装備表示パネル (画面上部・特大表示) -->
-            <div class="w-full bg-slate-900/90 border-2 border-amber-500/30 rounded-3xl p-5 shadow-2xl flex flex-wrap items-center justify-between gap-4 relative overflow-hidden">
-                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-2xl"></div>
-                <div class="flex items-center gap-5 z-10">
-                    <div id="equipIconBox" class="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 p-2.5 flex items-center justify-center shadow-2xl border-2 border-white/30 shrink-0 transform hover:scale-105 transition">
-                        <!-- SVG graphic loaded via JS -->
+            <!-- Management Modals Toggle Buttons -->
+            <div class="flex items-center gap-3">
+                <button onclick="openModal('staffModal')" class="glass-panel hover:bg-slate-800/90 text-white font-bold px-5 py-3 rounded-2xl border border-teal-500/40 shadow-xl flex items-center gap-2 text-xs transition">
+                    <i class="fa-solid fa-user-nurse text-pink-400 text-base"></i>
+                    <span>スタッフ雇用 (<span id="staffTotalCount">0</span>)</span>
+                </button>
+                <button onclick="openModal('upgradeModal')" class="glass-panel hover:bg-slate-800/90 text-white font-bold px-5 py-3 rounded-2xl border border-amber-500/40 shadow-xl flex items-center gap-2 text-xs transition">
+                    <i class="fa-solid fa-microscope text-amber-400 text-base"></i>
+                    <span>設備・診察台購入</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Sticky Bottom-Right Patient Info Card + Treatment Action Area -->
+    <div class="fixed bottom-6 right-6 z-40 pointer-events-auto flex flex-col items-end gap-3 max-w-xs sm:max-w-sm w-full">
+        <!-- Active Patient Info Card -->
+        <div class="glass-panel rounded-3xl p-4 shadow-2xl border-2 border-teal-500/40 w-full backdrop-blur-xl">
+            <div class="flex items-center justify-between gap-3 mb-2">
+                <div class="flex items-center gap-3">
+                    <div id="patientAvatar" class="w-12 h-12 bg-teal-500/20 border border-teal-400/40 rounded-2xl flex items-center justify-center text-2xl shadow-inner shrink-0">
+                        😷
                     </div>
                     <div>
-                        <div class="text-xs font-black text-amber-400 tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> 現在装備中の武器
+                        <div class="text-[10px] text-teal-400 font-extrabold uppercase tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-chair text-xs"></i> <span id="currentChairTitle">診察台 #1 の患者さん</span>
                         </div>
-                        <div id="equipName" class="text-xl sm:text-2xl font-black text-white drop-shadow">見習い兵の短剣</div>
-                        <div class="text-sm text-slate-300 mt-1">攻撃力: <span id="equipAtk" class="text-amber-400 font-black text-base">100</span></div>
+                        <div id="patientName" class="font-black text-white text-base leading-tight">山田 太郎 さま</div>
                     </div>
                 </div>
-                <button onclick="openModal('inventoryModal')" class="z-10 bg-gradient-to-r from-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 px-5 py-3 rounded-2xl text-xs font-black shadow-lg transition flex items-center gap-2 transform active:scale-95">
-                    <i class="fa-solid fa-box-archive"></i>
-                    <span>装備を付け替える</span>
-                </button>
             </div>
-
-            <!-- 2. 中段レイアウト (左側: メニューボタン / 右側: ガチャマシーン) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                
-                <!-- 左側：アクション＆メニュー操作 -->
-                <div class="flex flex-col gap-4 order-2 md:order-1">
-                    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-3">
-                        <h2 class="text-sm font-black text-amber-400 flex items-center gap-2">
-                            <i class="fa-solid fa-gamepad"></i> 冒険メニュー & ステータス
-                        </h2>
-                        
-                        <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/50 flex items-center justify-between">
-                            <span class="text-xs font-semibold text-slate-300">本日の残り召喚数</span>
-                            <span id="dailyCountText" class="text-sm font-black text-amber-400">600 / 600</span>
-                        </div>
-
-                        <button onclick="openModal('rateModal')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-3.5 rounded-xl text-xs font-bold transition flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-chart-pie text-amber-400"></i> 提供割合（確率一覧）</span>
-                            <i class="fa-solid fa-chevron-right text-slate-500"></i>
-                        </button>
-
-                        <button onclick="openModal('inventoryModal')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-3.5 rounded-xl text-xs font-bold transition flex items-center justify-between">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-boxes-stacked text-amber-400"></i> 所持装備一覧</span>
-                            <i class="fa-solid fa-chevron-right text-slate-500"></i>
-                        </button>
-                    </div>
-
-                    <!-- 3Dワールド冒険ボタン -->
-                    <button onclick="switchTo3DView()" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:brightness-110 text-white font-black p-5 rounded-2xl shadow-xl border border-emerald-400/40 flex items-center justify-center gap-3 text-base tracking-wide transition transform hover:-translate-y-0.5 active:scale-95">
-                        <i class="fa-solid fa-dragon text-xl"></i>
-                        <span>3Dオープンワールド・ボス決戦へ！</span>
-                    </button>
-                </div>
-
-                <!-- 右側：ガチャマシーンカード -->
-                <div class="order-1 md:order-2 flex justify-center">
-                    <div class="w-full max-w-[340px] bg-gradient-to-b from-amber-600 via-amber-800 to-purple-950 rounded-[40px] p-5 shadow-2xl border-4 border-amber-400/80 flex flex-col items-center justify-between relative overflow-hidden min-h-[460px]">
-                        
-                        <!-- 魔法陣エリア (お送りいただいた詳細な幾何学アルケミー魔法陣SVG) -->
-                        <div class="relative w-64 h-64 my-auto flex items-center justify-center alchemical-circle border-2 border-amber-400/60 p-2">
-                            <svg class="absolute inset-0 w-full h-full spin-outer text-amber-400/90" viewBox="0 0 500 500">
-                                <!-- 外周の二重リングと文字群 -->
-                                <circle cx="250" cy="250" r="235" fill="none" stroke="currentColor" stroke-width="6"/>
-                                <circle cx="250" cy="250" r="215" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="8,4"/>
-                                <circle cx="250" cy="250" r="190" fill="none" stroke="currentColor" stroke-width="4"/>
-                                
-                                <!-- 内側の三角形の幾何学配置 -->
-                                <polygon points="250,55 430,375 70,375" fill="none" stroke="currentColor" stroke-width="5"/>
-                                <polygon points="250,445 70,125 430,125" fill="none" stroke="currentColor" stroke-width="3"/>
-                                
-                                <!-- 中心部の複雑な錬金螺旋・ルーンパターン -->
-                                <path d="M250 140 C320 140, 360 200, 330 260 C300 320, 200 300, 190 230 C180 160, 250 120, 280 180 C310 240, 220 340, 160 280" fill="none" stroke="currentColor" stroke-width="6"/>
-                                <circle cx="250" cy="250" r="60" fill="none" stroke="currentColor" stroke-width="4"/>
-                                
-                                <!-- 周囲の小円オーナメント（8箇所） -->
-                                <circle cx="250" cy="25" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="410" cy="90" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="475" cy="250" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="410" cy="410" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="250" cy="475" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="90" cy="410" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="25" cy="250" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                                <circle cx="90" cy="90" r="18" fill="#111" stroke="currentColor" stroke-width="3"/>
-                            </svg>
-                            <svg class="absolute inset-4 w-[88%] h-[88%] spin-mid text-purple-400/80" viewBox="0 0 500 500">
-                                <rect x="120" y="120" width="260" height="260" fill="none" stroke="currentColor" stroke-width="3" transform="rotate(45 250 250)"/>
-                                <circle cx="250" cy="250" r="130" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="12,6"/>
-                            </svg>
-
-                            <!-- 中心魔法核 -->
-                            <div class="w-24 h-24 rounded-full border-4 border-amber-300 bg-amber-950/80 backdrop-blur flex items-center justify-center relative shadow-[0_0_30px_rgba(234,179,8,0.8)] magic-pulse z-10">
-                                <i class="fa-solid fa-atom text-4xl text-amber-300 animate-spin"></i>
-                            </div>
-                        </div>
-
-                        <!-- 召喚ボタン群 (1連 / 10連 / 100連) -->
-                        <div class="w-full grid grid-cols-3 gap-2 mt-4 z-10">
-                            <button onclick="drawGacha(1)" class="bg-gradient-to-b from-amber-300 to-amber-500 hover:brightness-110 text-slate-950 font-black py-2.5 px-1 rounded-2xl border-2 border-amber-200 text-xs shadow-md active:scale-95 transition truncate">
-                                1連召喚
-                            </button>
-                            <button onclick="drawGacha(10)" class="bg-gradient-to-b from-indigo-500 to-purple-600 hover:brightness-110 text-white font-black py-2.5 px-1 rounded-2xl border-2 border-indigo-300 text-xs shadow-md active:scale-95 transition truncate">
-                                ✨ 10連
-                            </button>
-                            <button onclick="drawGacha(100)" class="bg-gradient-to-r from-amber-500 via-rose-500 to-orange-500 hover:brightness-110 text-white font-black py-2.5 px-1 rounded-2xl border-2 border-amber-200 text-xs shadow-md active:scale-95 transition truncate">
-                                ⚡ 100連
-                            </button>
-                        </div>
-
-                        <div class="w-24 h-2 bg-slate-950/80 rounded-full mt-3 border border-amber-500/30"></div>
-                    </div>
-                </div>
-
+            <div class="bg-slate-900/80 rounded-xl p-2.5 border border-slate-700/80 flex items-center justify-between">
+                <span class="text-[10px] text-slate-400 font-bold">症状</span>
+                <span id="patientSymptom" class="text-xs text-yellow-300 font-extrabold">重度の虫歯（要治療）</span>
             </div>
         </div>
 
-        <!-- 3D Battle View Wrapper (画面遷移用) -->
-        <div id="battle3DView" class="hidden flex flex-col gap-4">
-            <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 p-4 rounded-2xl">
+        <!-- Big Treatment Button -->
+        <button onclick="treatCurrentPatient()" class="w-full group relative bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-500 hover:brightness-110 text-slate-950 font-black px-6 py-4 rounded-3xl shadow-2xl active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 border-2 border-yellow-200/50">
+            <div class="w-10 h-10 bg-slate-950/20 rounded-2xl flex items-center justify-center text-slate-950 text-xl font-extrabold group-hover:rotate-12 transition-transform">
+                <i class="fa-solid fa-tooth"></i>
+            </div>
+            <div class="text-left">
+                <div class="text-[10px] uppercase font-bold text-slate-900 tracking-wider">TAP TO TREAT</div>
+                <div class="text-base font-black leading-tight">診察・治療する！</div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Staff Hiring Modal -->
+    <div id="staffModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-teal-500/50 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-base font-black text-teal-300 flex items-center gap-2">
+                    <i class="fa-solid fa-user-nurse"></i> 医療スタッフの雇用
+                </h3>
+                <button onclick="closeModal('staffModal')" class="text-slate-400 hover:text-white font-bold text-lg px-2">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">スタッフを雇用すると3D診察室内にスタッフが着任し、自動で診療を開始します。</p>
+            <div id="staffList" class="flex flex-col gap-2.5 max-h-[60vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Equipment Upgrade Modal -->
+    <div id="upgradeModal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-amber-500/50 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                <h3 class="text-base font-black text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-microscope"></i> クリニック設備増設・アップグレード
+                </h3>
+                <button onclick="closeModal('upgradeModal')" class="text-slate-400 hover:text-white font-bold text-lg px-2">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">診察ユニット（治療チェア）を設置すると新しい3Dチェアと患者さんが追加されます！</p>
+            <div id="equipmentList" class="flex flex-col gap-2.5 max-h-[60vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Treatment Completed -->
+    <div id="treatmentModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel border-2 border-emerald-500/60 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center flex flex-col items-center gap-4">
+            <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center text-3xl border border-emerald-500/40">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-black text-white">3D治療が完了しました！</h3>
+                <p id="treatmentSummary" class="text-xs text-slate-300 mt-1">患者さんの歯がきれいになりました！</p>
+            </div>
+            <div class="bg-slate-900/80 rounded-2xl p-4 w-full border border-slate-700 flex justify-around text-xs">
                 <div>
-                    <h2 class="text-base font-black text-amber-400 flex items-center gap-2">
-                        <i class="fa-solid fa-khanda"></i> 3Dオープンワールド・魔王決戦
-                    </h2>
-                    <p class="text-xs text-slate-400">画面上の【攻撃】ボタンまたは直接3D空間をタップして攻撃！</p>
+                    <span class="text-slate-400 block text-[10px]">診療報酬</span>
+                    <span id="earnedMoneyText" class="text-emerald-400 font-black text-base">+15,000 円</span>
                 </div>
-                <button onclick="switchToGachaView()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition">
-                    ← ガチャ画面へ戻る
-                </button>
-            </div>
-
-            <!-- 魔王HPゲージ -->
-            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col gap-2">
-                <div class="flex justify-between items-center text-xs font-black">
-                    <span class="text-red-500 flex items-center gap-1.5"><i class="fa-solid fa-skull text-base"></i> 魔王の体力</span>
-                    <span id="bossHpText" class="text-white">10,000,000 / 10,000,000</span>
-                </div>
-                <div class="w-full bg-slate-950 h-5 rounded-full overflow-hidden border border-red-900/50 p-0.5 relative">
-                    <div id="bossHpBar" class="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 h-full rounded-full transition-all duration-300 w-full"></div>
+                <div class="border-l border-slate-700 pl-4">
+                    <span class="text-slate-400 block text-[10px]">評判アップ</span>
+                    <span id="earnedReputationText" class="text-amber-400 font-black text-base">+0.1 ★</span>
                 </div>
             </div>
-
-            <!-- Three.js Canvas Container & Action Overlay -->
-            <div class="relative w-full h-[500px] rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl bg-black select-none">
-                <div id="canvas3d" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
-                
-                <!-- Floating Damage Numbers Container -->
-                <div id="damageLayer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
-
-                <!-- Battle Controls Overlay -->
-                <div class="absolute bottom-5 right-5 flex items-center gap-3">
-                    <button onclick="trigger3DAttack()" class="w-20 h-20 bg-gradient-to-tr from-red-600 to-amber-500 rounded-full border-4 border-amber-300 text-white font-black text-sm shadow-2xl hover:scale-105 active:scale-95 transition flex flex-col items-center justify-center gap-1">
-                        <i class="fa-solid fa-burst text-xl"></i>
-                        <span>攻撃</span>
-                    </button>
-                    <button onclick="triggerSpecialAttack()" class="w-24 h-24 bg-gradient-to-tr from-purple-600 via-pink-600 to-amber-400 rounded-full border-4 border-white text-white font-black text-sm shadow-2xl hover:scale-105 active:scale-95 transition flex flex-col items-center justify-center gap-1">
-                        <i class="fa-solid fa-wand-magic-sparkles text-2xl animate-bounce"></i>
-                        <span>必殺技</span>
-                    </button>
-                </div>
-
-                <div class="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur px-3 py-1.5 rounded-xl text-[10px] text-slate-400 border border-slate-800 pointer-events-none">
-                    視点: マウスドラッグ / タッチスワイプ
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Modal: Gacha Cut-in Animation Screen -->
-    <div id="cutinOverlay" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center hidden">
-        <div id="cutinBg" class="absolute inset-0 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 flex items-center justify-center">
-            <div class="w-[500px] h-[500px] border-4 border-amber-400/40 rounded-full animate-ping opacity-25"></div>
-        </div>
-        <div class="z-10 text-center flex flex-col items-center gap-6 p-6">
-            <div id="cutinSubText" class="text-sm sm:text-lg font-black text-amber-400 tracking-widest uppercase">
-                Alchemical Summon Ritual
-            </div>
-            <div id="cutinText" class="text-2xl sm:text-4xl font-black text-amber-300 tracking-wider animate-pulse max-w-xl">
-                古代の魔法陣が最大解放され、次元の扉が開く…！
-            </div>
-            <div class="w-40 h-40 rounded-full border-4 border-amber-400 flex items-center justify-center bg-amber-500/20 shadow-[0_0_80px_rgba(245,158,11,0.9)] alchemical-circle">
-                <i class="fa-solid fa-sun text-6xl text-amber-300 spin-outer"></i>
-            </div>
-            <div class="text-xs text-slate-400 animate-pulse">運命の装備を選別中...</div>
-        </div>
-    </div>
-
-    <!-- Modal: Gacha Results -->
-    <div id="resultModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border-2 border-amber-500/50 rounded-3xl max-w-lg w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
-            <h3 class="text-xl font-black text-amber-400 text-center mb-4 flex items-center justify-center gap-2">
-                <i class="fa-solid fa-gifts text-amber-300"></i> ★ 召喚（ガチャ）結果 ★
-            </h3>
-            
-            <div id="resultGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 overflow-y-auto p-1 mb-6 max-h-[50vh]">
-                <!-- Item Cards inserted dynamically with staggered reveal effect -->
-            </div>
-
-            <button onclick="closeModal('resultModal')" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black py-3.5 rounded-2xl hover:brightness-110 transition shadow-xl text-xs active:scale-95">
-                確認して獲得
+            <button onclick="closeModal('treatmentModal'); nextPatient();" class="w-full bg-gradient-to-r from-teal-400 to-emerald-500 text-slate-950 font-black py-3 rounded-2xl hover:brightness-110 transition shadow-lg text-xs">
+                次の患者さんを診察する
             </button>
         </div>
     </div>
 
-    <!-- Modal: Drop Rates -->
-    <div id="rateModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
-            <h3 class="text-base font-black text-amber-400 text-center">召喚確率一覧</h3>
-            <div class="flex flex-col gap-2 text-xs">
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-amber-500/40">
-                    <span class="font-black text-amber-400">KAMI (神)</span>
-                    <span class="font-bold text-white">0.01 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-purple-500/40">
-                    <span class="font-black text-purple-400">GOD</span>
-                    <span class="font-bold text-white">0.10 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-blue-500/40">
-                    <span class="font-black text-blue-400">UR</span>
-                    <span class="font-bold text-white">1.00 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-emerald-500/40">
-                    <span class="font-black text-emerald-400">SSR</span>
-                    <span class="font-bold text-white">5.00 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-600">
-                    <span class="font-black text-slate-300">SR</span>
-                    <span class="font-bold text-white">15.00 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-700">
-                    <span class="font-black text-slate-400">R</span>
-                    <span class="font-bold text-white">20.00 %</span>
-                </div>
-                <div class="flex justify-between p-2.5 bg-slate-800/60 rounded-xl border border-slate-800">
-                    <span class="font-black text-slate-500">N (ノーマル)</span>
-                    <span class="font-bold text-white">58.89 %</span>
-                </div>
-            </div>
-            <button onclick="closeModal('rateModal')" class="w-full bg-slate-800 text-slate-200 font-bold py-2.5 rounded-xl border border-slate-700 text-xs hover:bg-slate-700 transition">
-                閉じる
-            </button>
-        </div>
-    </div>
-
-    <!-- Modal: Inventory -->
-    <div id="inventoryModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
-            <h3 class="text-base font-black text-amber-400 text-center mb-4">所持装備一覧 & 着脱</h3>
-            <div id="inventoryList" class="flex flex-col gap-2.5 overflow-y-auto mb-4 p-1 max-h-[55vh]">
-                <!-- Inventory Items rendered dynamically -->
-            </div>
-            <button onclick="closeModal('inventoryModal')" class="w-full bg-slate-800 text-slate-200 font-bold py-2.5 rounded-xl border border-slate-700 text-xs hover:bg-slate-700 transition">
-                閉じる
-            </button>
-        </div>
-    </div>
-
-    <!-- JavaScript Game Engine & Logic -->
+    <!-- JavaScript & Full 3D Engine -->
     <script>
-        // Modal Open & Close Helper Functions
-        function openModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('hidden');
-                if (modalId === 'inventoryModal') {
-                    updateInventoryUI();
-                }
-            }
-        }
+        // Game State Variables
+        let money = 100000;
+        let reputation = 1.0;
+        let activeChairIndex = 0; // Current active selected chair/patient
 
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
+        // Player (Doctor) Movement State
+        const keysPressed = {};
 
-        function resetDailyLimit() {
-            dailyLimit = 600;
-            const dailyText = document.getElementById('dailyCountText');
-            if (dailyText) {
-                dailyText.innerText = `${dailyLimit} / 600`;
-            }
-        }
-
-        // High Quality SVG Visual Graphics for Items (Enlarged & Detailed)
-        const SVGS = {
-            kami: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_12px_rgba(234,179,8,1)]"><path d="M50 5 L60 35 L95 40 L68 62 L78 95 L50 75 L22 95 L32 62 L5 40 L40 35 Z" fill="url(#kamiGrad)" stroke="#fef08a" stroke-width="2.5"/><circle cx="50" cy="50" r="12" fill="#fff" class="animate-pulse"/><defs><linearGradient id="kamiGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fef08a"/><stop offset="50%" stop-color="#eab308"/><stop offset="100%" stop-color="#b45309"/></linearGradient></defs></svg>`,
-            god: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_10px_rgba(168,85,247,1)]"><path d="M50 10 L65 30 L90 50 L65 70 L50 90 L35 70 L10 50 L35 30 Z" fill="url(#godGrad)" stroke="#e9d5ff" stroke-width="2.5"/><circle cx="50" cy="50" r="15" fill="#f472b6"/><defs><linearGradient id="godGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#c084fc"/><stop offset="100%" stop-color="#581c87"/></linearGradient></defs></svg>`,
-            ur: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(59,130,246,0.9)]"><path d="M20 85 L80 85 L50 15 Z" fill="url(#urGrad)" stroke="#93c5fd" stroke-width="2.5"/><rect x="44" y="60" width="12" height="30" fill="#1e3a8a"/><defs><linearGradient id="urGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#1d4ed8"/></linearGradient></defs></svg>`,
-            ssr: `<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-[0_0_8px_rgba(16,185,129,0.9)]"><circle cx="50" cy="50" r="38" fill="url(#ssrGrad)" stroke="#a7f3d0" stroke-width="2.5"/><path d="M50 15 L50 85 M15 50 L85 50" stroke="#ecfdf5" stroke-width="5"/><defs><linearGradient id="ssrGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#34d399"/><stop offset="100%" stop-color="#047857"/></linearGradient></defs></svg>`,
-            sr: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M30 20 L70 20 L85 80 L15 80 Z" fill="#475569" stroke="#94a3b8" stroke-width="2.5"/><circle cx="50" cy="50" r="14" fill="#64748b"/></svg>`,
-            r: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="20" y="20" width="60" height="60" rx="12" fill="#334155" stroke="#64748b" stroke-width="2.5"/></svg>`,
-            n: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 15 L85 85 L15 85 Z" fill="#1e293b" stroke="#475569" stroke-width="2.5"/></svg>`
-        };
-
-        // Gacha Item Pool
-        const gachaPool = [
-            { id: 'kami_sword', name: '全知全能・神光剣', rarity: 'KAMI', rate: 0.0001, atk: 999999, color: 'from-amber-300 via-yellow-400 to-amber-600', stroke: 'border-amber-300', svg: SVGS.kami },
-            { id: 'god_sword', name: '創世覇王の大剣', rarity: 'GOD', rate: 0.0010, atk: 250000, color: 'from-purple-400 to-indigo-600', stroke: 'border-purple-300', svg: SVGS.god },
-            { id: 'ur_spear', name: '炎滅神槍ルシファー', rarity: 'UR', rate: 0.0100, atk: 50000, color: 'from-blue-400 to-cyan-600', stroke: 'border-blue-300', svg: SVGS.ur },
-            { id: 'ssr_sword', name: '光輝の大剣', rarity: 'SSR', rate: 0.0500, atk: 12000, color: 'from-emerald-400 to-teal-600', stroke: 'border-emerald-300', svg: SVGS.ssr },
-            { id: 'sr_wand', name: '詠唱者の杖', rarity: 'SR', rate: 0.1500, atk: 3500, color: 'from-slate-500 to-slate-700', stroke: 'border-slate-400', svg: SVGS.sr },
-            { id: 'r_sword', name: '鋼鉄の大剣', rarity: 'R', rate: 0.2000, atk: 1000, color: 'from-slate-600 to-slate-800', stroke: 'border-slate-500', svg: SVGS.r },
-            { id: 'n_dagger', name: '見習い兵の短剣', rarity: 'N', rate: 0.5889, atk: 100, color: 'from-slate-700 to-slate-900', stroke: 'border-slate-600', svg: SVGS.n }
+        // Staff Data
+        const staffList = [
+            { id: 'hygienist', name: '歯科衛生士', cost: 50000, incomePerSec: 1500, count: 0, icon: 'fa-user-nurse', color: 'text-pink-400' },
+            { id: 'dentist', name: '勤務医 (歯科医師)', cost: 200000, incomePerSec: 7500, count: 0, icon: 'fa-user-doctor', color: 'text-cyan-400' },
+            { id: 'orthodontist', name: '矯正専門医', cost: 1000000, incomePerSec: 45000, count: 0, icon: 'fa-user-gear', color: 'text-amber-400' }
         ];
 
-        // Game State Variables
-        let dailyLimit = 600;
-        let equippedItemId = 'n_dagger';
-        let inventory = { 'n_dagger': 1 };
-        let bossMaxHp = 10000000;
-        let bossHp = 10000000;
-        let heroGold = 1000;
-        let heroLevel = 1;
+        // Equipment Data
+        const equipmentList = [
+            { id: 'chair', name: '3D診察ユニット増設', cost: 150000, level: 1, multiplier: 1.5, icon: 'fa-chair', desc: '診察台と新しい患者さんを増設' },
+            { id: 'ray', name: '最新3D CTレントゲン機', cost: 300000, level: 0, multiplier: 2.0, icon: 'fa-x-ray', desc: '精密診断が可能になり治療単価UP' },
+            { id: 'laser', name: '無痛レーザー治療システム', cost: 800000, level: 0, multiplier: 3.5, icon: 'fa-wand-magic-sparkles', desc: '痛みのない治療で評判と売上が急上昇' }
+        ];
 
-        // UI View Switchers
-        function switchTo3DView() {
-            document.getElementById('gachaMainView').classList.add('hidden');
-            document.getElementById('battle3DView').classList.remove('hidden');
-            if (!threeInitialized) init3DScene();
+        // Master Patients Pool Template
+        const masterPatients = [
+            { name: '山田 太郎 さま', avatar: '👨‍💼', symptom: '重度の虫歯（要治療）', reward: 12000, reqClicks: 4, shirtColor: 0x3b82f6 },
+            { name: '佐藤 花子 さま', avatar: '👩‍🏫', symptom: '歯石クリーニング', reward: 8000, reqClicks: 3, shirtColor: 0xec4899 },
+            { name: '鈴木 一郎 さま', avatar: '👴', symptom: 'インプラント手術', reward: 50000, reqClicks: 8, shirtColor: 0x8b5cf6 },
+            { name: '高橋 健太 さま', avatar: '👦', symptom: 'フッ素塗布ケア', reward: 6000, reqClicks: 2, shirtColor: 0x10b981 },
+            { name: '伊藤 エリ さま', avatar: '👩‍🎨', symptom: 'マウスピース矯正診察', reward: 35000, reqClicks: 6, shirtColor: 0xf59e0b },
+            { name: '中村 拓也 さま', avatar: '👨‍✈️', symptom: '親知柱の抜歯治療', reward: 28000, reqClicks: 5, shirtColor: 0xef4444 },
+            { name: '小林 美咲 さま', avatar: '👩‍⚕️', symptom: 'ホワイトニング施術', reward: 18000, reqClicks: 4, shirtColor: 0x06b6d4 }
+        ];
+
+        // Array holding state of patients seated at each chair unit
+        let activePatientsState = [];
+
+        function getRandomPatient() {
+            const template = masterPatients[Math.floor(Math.random() * masterPatients.length)];
+            return { ...template, progress: 0 };
         }
 
-        // Animated Gacha Cut-in Execution (Extended Length & Drama)
-        function drawGacha(count) {
-            if (dailyLimit < count) {
-                alert(`本日の召喚可能回数が不足しています！（残り: ${dailyLimit}回）`);
-                return;
-            }
-
-            dailyLimit -= count;
-            document.getElementById('dailyCountText').innerText = `${dailyLimit} / 600`;
-
-            const results = [];
-            let highestRarity = 'N';
-
-            for (let i = 0; i < count; i++) {
-                const rand = Math.random();
-                let cum = 0;
-                let picked = gachaPool[gachaPool.length - 1];
-
-                for (const item of gachaPool) {
-                    cum += item.rate;
-                    if (rand <= cum) {
-                        picked = item;
-                        break;
-                    }
-                }
-                results.push(picked);
-                inventory[picked.id] = (inventory[picked.id] || 0) + 1;
-
-                if (picked.rarity === 'KAMI') highestRarity = 'KAMI';
-                else if (picked.rarity === 'GOD' && highestRarity !== 'KAMI') highestRarity = 'GOD';
-                else if (picked.rarity === 'UR' && !['KAMI', 'GOD'].includes(highestRarity)) highestRarity = 'UR';
-            }
-
-            // Play Extended Cut-in Animation Screen
-            const cutin = document.getElementById('cutinOverlay');
-            const cutinText = document.getElementById('cutinText');
-            const cutinSub = document.getElementById('cutinSubText');
-            const cutinBg = document.getElementById('cutinBg');
-
-            cutin.classList.remove('hidden');
-            
-            if (highestRarity === 'KAMI') {
-                cutinSub.innerText = '★★★ LEGENDARY GOD SUMMON ★★★';
-                cutinText.innerText = '【神・降・臨】全知全能の光が世界を包み込む…！！';
-                cutinBg.className = 'absolute inset-0 rainbow-bg bg-gradient-to-r from-yellow-500 via-rose-500 to-indigo-600 flex items-center justify-center';
-            } else if (highestRarity === 'GOD') {
-                cutinSub.innerText = '★★ SUPREME AWAKENING ★★';
-                cutinText.innerText = '【GODレア覚醒】覇王の波動が轟く…！';
-                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-purple-900 via-pink-800 to-indigo-950 flex items-center justify-center';
-            } else if (highestRarity === 'UR') {
-                cutinSub.innerText = '★ ULTRA RARE BREAKTHROUGH ★';
-                cutinText.innerText = '【UR降臨】強力な魔力が召喚陣から溢れ出る！';
-                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 flex items-center justify-center';
-            } else {
-                cutinSub.innerText = 'ALCHEMICAL RITUAL';
-                cutinText.innerText = '古代の錬金魔陣が起動し、エネルギーが収束する…';
-                cutinBg.className = 'absolute inset-0 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-950 flex items-center justify-center';
-            }
-
-            // Longer wait time (2.6 seconds) for high excitement
-            setTimeout(() => {
-                cutin.classList.add('hidden');
-                showResults(results);
-            }, 2600);
+        // Initialize Patient Data for Chair
+        function initChairPatient(chairIdx) {
+            activePatientsState[chairIdx] = getRandomPatient();
         }
 
-        // Display Gacha Result Modal with Sequential Reveal Animation
-        function showResults(items) {
-            const grid = document.getElementById('resultGrid');
-            if (!grid) return;
-
-            grid.innerHTML = '';
-            openModal('resultModal');
-
-            items.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'bg-slate-800/90 border border-slate-700 rounded-2xl p-3 flex flex-col items-center justify-center gap-1 shadow-lg opacity-0 transform scale-50 transition-all duration-300';
-                card.innerHTML = `
-                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${item.color} p-2 flex items-center justify-center shadow-md border border-white/20">
-                        ${item.svg}
-                    </div>
-                    <div class="text-xs font-black text-amber-400 mt-1">[${item.rarity}]</div>
-                    <div class="text-xs font-bold text-white truncate w-full text-center">${item.name}</div>
-                    <div class="text-[10px] text-slate-400">攻撃力 +${item.atk.toLocaleString()}</div>
-                `;
-                grid.appendChild(card);
-
-                // Sequential stagger popup effect
-                setTimeout(() => {
-                    card.classList.remove('opacity-0', 'scale-50');
-                    card.classList.add('opacity-100', 'scale-100');
-                }, index * Math.min(100, 1500 / items.length));
-            });
+        // UI Helpers
+        function formatMoney(num) {
+            return num.toLocaleString() + ' 円';
         }
 
-        // Equip Item Logic
-        function equipItem(id) {
-            const item = gachaPool.find(g => g.id === id);
-            if (!item) return;
-
-            equippedItemId = id;
-            document.getElementById('equipName').innerText = item.name;
-            document.getElementById('equipAtk').innerText = item.atk.toLocaleString();
-            
-            const iconBox = document.getElementById('equipIconBox');
-            iconBox.className = `w-20 h-20 rounded-2xl bg-gradient-to-br ${item.color} p-2.5 flex items-center justify-center shadow-2xl border-2 border-white/30 shrink-0 transform hover:scale-105 transition`;
-            iconBox.innerHTML = item.svg;
-
-            updateInventoryUI();
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
         }
 
-        // Render Inventory List UI
-        function updateInventoryUI() {
-            const container = document.getElementById('inventoryList');
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Switch Active Selected Chair / Patient
+        function selectChair(idx) {
+            if (idx >= activePatientsState.length) return;
+            activeChairIndex = idx;
+            const patient = activePatientsState[idx];
+
+            document.getElementById('currentChairTitle').innerText = `診察台 #${idx + 1} の患者さん`;
+            document.getElementById('patientName').innerText = patient.name;
+            document.getElementById('patientAvatar').innerText = patient.avatar;
+            document.getElementById('patientSymptom').innerText = patient.symptom;
+
+            renderChairSelectors();
+        }
+
+        function renderChairSelectors() {
+            const container = document.getElementById('chairSelectorContainer');
             if (!container) return;
-
-            const items = Object.keys(inventory).map(id => {
-                const item = gachaPool.find(g => g.id === id);
-                return { ...item, count: inventory[id] };
-            });
-
-            container.innerHTML = items.map(item => {
-                const isEquipped = item.id === equippedItemId;
-                return `
-                <div class="flex items-center justify-between p-3 bg-slate-800/80 rounded-2xl border ${isEquipped ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700'}">
-                    <div class="flex items-center gap-3">
-                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br ${item.color} p-2 flex items-center justify-center shadow-md border border-white/20 shrink-0">
-                            ${item.svg}
-                        </div>
-                        <div>
-                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                                ${item.name}
-                                ${isEquipped ? '<span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded">装備中</span>' : ''}
-                            </div>
-                            <div class="text-[10px] text-amber-400">ATK +${item.atk.toLocaleString()} (所持: x${item.count})</div>
-                        </div>
-                    </div>
-                    <button onclick="equipItem('${item.id}')" ${isEquipped ? 'disabled' : ''} 
-                        class="px-3 py-1.5 text-xs font-bold rounded-xl transition ${isEquipped ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 hover:brightness-110 shadow-md'}">
-                        ${isEquipped ? '装備中' : '装備する'}
-                    </button>
-                </div>
-            `;
-            }).join('');
+            container.innerHTML = activePatientsState.map((_, i) => `
+                <button onclick="selectChair(${i})" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${i === activeChairIndex ? 'bg-teal-500 text-slate-950 shadow-lg scale-105' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+                    <i class="fa-solid fa-chair text-[10px]"></i> 台#${i + 1}
+                </button>
+            `).join('');
         }
 
-        // 3D Battle Action Attacks & Popups
-        function trigger3DAttack(multiplier = 1) {
-            const equipped = gachaPool.find(g => g.id === equippedItemId);
-            const baseDamage = equipped ? equipped.atk : 100;
-            const damage = Math.floor(baseDamage * (0.9 + Math.random() * 0.2) * multiplier);
+        // Treatment Action Logic for Active Patient
+        function treatCurrentPatient() {
+            const currentPatient = activePatientsState[activeChairIndex];
+            if (!currentPatient) return;
 
-            bossHp = Math.max(0, bossHp - damage);
+            currentPatient.progress++;
             
-            const percent = (bossHp / bossMaxHp) * 100;
-            document.getElementById('bossHpBar').style.width = `${percent}%`;
-            document.getElementById('bossHpText').innerText = `${bossHp.toLocaleString()} / ${bossMaxHp.toLocaleString()}`;
-
-            // Floating Damage Number
-            const layer = document.getElementById('damageLayer');
+            // Visual Floating Money Effect
+            const layer = document.getElementById('moneyLayer');
             if (layer) {
                 const pop = document.createElement('div');
-                pop.className = 'damage-pop text-2xl sm:text-4xl';
-                pop.style.left = `${35 + Math.random() * 30}%`;
-                pop.style.top = `${30 + Math.random() * 20}%`;
-                pop.innerText = `-${damage.toLocaleString()}!`;
+                pop.className = 'money-pop text-lg sm:text-xl font-black';
+                pop.style.left = `${45 + (Math.random() * 10 - 5)}%`;
+                pop.style.top = `${45 + (Math.random() * 10 - 5)}%`;
+                pop.innerText = `診察台#${activeChairIndex + 1} 治療中... ✨`;
                 layer.appendChild(pop);
-                setTimeout(() => pop.remove(), 800);
+                setTimeout(() => pop.remove(), 1000);
             }
 
-            if (bossMesh) {
-                bossMesh.scale.set(1.4, 1.4, 1.4);
-                setTimeout(() => bossMesh.scale.set(1, 1, 1), 120);
+            // Animate 3D Patient Character & Doctor for active chair
+            animateTreatmentAction(activeChairIndex);
+
+            if (currentPatient.progress >= currentPatient.reqClicks) {
+                let baseReward = currentPatient.reward;
+                equipmentList.forEach(eq => {
+                    if (eq.level > 0 && eq.id !== 'chair') baseReward *= (1 + (eq.level * 0.3));
+                });
+                const finalReward = Math.floor(baseReward);
+                const repGain = 0.1;
+
+                money += finalReward;
+                reputation = Math.min(5.0, Math.round((reputation + repGain) * 10) / 10);
+
+                document.getElementById('earnedMoneyText').innerText = `+${formatMoney(finalReward)}`;
+                document.getElementById('earnedReputationText').innerText = `+${repGain} ★`;
+                document.getElementById('treatmentSummary').innerText = `診察台#${activeChairIndex + 1} の ${currentPatient.name} の「${currentPatient.symptom}」が完了しました！`;
+
+                updateUI();
+                openModal('treatmentModal');
+            }
+        }
+
+        function nextPatient() {
+            // Replace patient at current active chair
+            activePatientsState[activeChairIndex] = getRandomPatient();
+            const newPatient = activePatientsState[activeChairIndex];
+
+            // Update 3D patient visual shirt color
+            if (patientMeshes[activeChairIndex]) {
+                patientMeshes[activeChairIndex].material.color.setHex(newPatient.shirtColor);
             }
 
-            // Reward Gold & EXP
-            heroGold += Math.floor(damage / 100);
-            document.getElementById('goldText').innerText = `${heroGold.toLocaleString()} G`;
+            selectChair(activeChairIndex);
         }
 
-        function triggerSpecialAttack() {
-            trigger3DAttack(5);
+        function hireStaff(index) {
+            const staff = staffList[index];
+            if (money >= staff.cost) {
+                money -= staff.cost;
+                staff.count++;
+                staff.cost = Math.floor(staff.cost * 1.4);
+                spawn3DStaffCharacter(staff.id);
+                updateUI();
+            }
         }
 
-        // Initialize Default Equipment UI
+        function upgradeEquipment(index) {
+            const eq = equipmentList[index];
+            if (money >= eq.cost) {
+                money -= eq.cost;
+                eq.level++;
+                eq.cost = Math.floor(eq.cost * 1.6);
+                if (eq.id === 'chair') {
+                    spawn3DChairUnit();
+                }
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('moneyText').innerText = formatMoney(money);
+            document.getElementById('reputationText').innerText = `★ ${reputation.toFixed(1)}`;
+
+            let totalStaff = 0;
+            staffList.forEach(s => totalStaff += s.count);
+            document.getElementById('staffTotalCount').innerText = `${totalStaff}人`;
+
+            renderChairSelectors();
+
+            // Render Staff List
+            document.getElementById('staffList').innerHTML = staffList.map((s, i) => `
+                <div class="flex items-center justify-between p-3 bg-slate-900/90 rounded-2xl border border-slate-700">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center ${s.color} text-lg">
+                            <i class="fa-solid ${s.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white">${s.name} <span class="text-teal-400 text-[11px]">(所持: ${s.count}人)</span></div>
+                            <div class="text-[10px] text-slate-400">+${formatMoney(s.incomePerSec)}/秒</div>
+                        </div>
+                    </div>
+                    <button onclick="hireStaff(${i})" class="px-3 py-2 text-xs font-bold rounded-xl transition ${money >= s.cost ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}">
+                        雇用 ${formatMoney(s.cost)}
+                    </button>
+                </div>
+            `).join('');
+
+            // Render Equipment List
+            document.getElementById('equipmentList').innerHTML = equipmentList.map((eq, i) => `
+                <div class="flex items-center justify-between p-3 bg-slate-900/90 rounded-2xl border border-slate-700">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-amber-400 text-lg">
+                            <i class="fa-solid ${eq.icon}"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-bold text-white">${eq.name} <span class="text-amber-400 text-[11px]">(Lv.${eq.level})</span></div>
+                            <div class="text-[10px] text-slate-400">${eq.desc}</div>
+                        </div>
+                    </div>
+                    <button onclick="upgradeEquipment(${i})" class="px-3 py-2 text-xs font-bold rounded-xl transition ${money >= eq.cost ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md' : 'bg-slate-700 text-slate-400 cursor-not-allowed'}">
+                        導入 ${formatMoney(eq.cost)}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Automatic Income Loop (Every 1 Sec)
+        setInterval(() => {
+            let autoIncome = 0;
+            staffList.forEach(s => autoIncome += s.count * s.incomePerSec);
+            if (autoIncome > 0) {
+                money += autoIncome;
+                updateUI();
+            }
+        }, 1000);
+
+        // Window Load Initialization
         window.addEventListener('DOMContentLoaded', () => {
-            equipItem('n_dagger');
+            initChairPatient(0);
+            updateUI();
+            initFull3DClinic();
+            selectChair(0);
         });
 
-        // Three.js 3D Open World Engine setup
-        let threeInitialized = false;
-        let scene, camera, renderer, bossMesh;
-        let isMouseDown = false;
-        let mouseX = 0, mouseY = 0;
-        let cameraAngleX = 0, cameraAngleY = 0.3;
+        /* ==========================================
+           FULL 3D GRAPHICS ENGINE (THREE.JS)
+           ========================================== */
+        let scene, camera, renderer;
+        let isMouseDown = false, mouseX = 0, mouseY = 0;
+        let cameraAngleX = 0, cameraAngleY = 0.5, cameraDistance = 14;
 
-        function init3DScene() {
-            threeInitialized = true;
+        // 3D Objects References
+        let doctorGroup;
+        let chairGroups = [];
+        let patientMeshes = [];
+        let animatedStaffList = [];
+
+        function initFull3DClinic() {
             const container = document.getElementById('canvas3d');
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x090d16);
-            scene.fog = new THREE.FogExp2(0x090d16, 0.015);
+            scene.background = new THREE.Color(0x0a0f1d);
 
-            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-            scene.add(ambientLight);
+            // Lighting Setup
+            const ambient = new THREE.AmbientLight(0xf8fafc, 0.8);
+            scene.add(ambient);
 
-            const dirLight = new THREE.DirectionalLight(0xf59e0b, 1.5);
-            dirLight.position.set(20, 40, 20);
-            scene.add(dirLight);
+            const sunLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+            sunLight.position.set(10, 20, 15);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
 
-            // Terrain Ground
-            const groundGeo = new THREE.PlaneGeometry(100, 100, 32, 32);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, wireframe: true });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
+            const warmPoint = new THREE.PointLight(0xfacc15, 0.6, 20);
+            warmPoint.position.set(-5, 8, -2);
+            scene.add(warmPoint);
 
-            // Boss Mesh
-            const bossGeo = new THREE.DodecahedronGeometry(3.5, 1);
-            const bossMat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.8, roughness: 0.2 });
-            bossMesh = new THREE.Mesh(bossGeo, bossMat);
-            bossMesh.position.set(0, 4, 0);
-            scene.add(bossMesh);
+            // Build Full 3D Clinic Environment (Walls, Floor, Reception, Waiting Chairs)
+            buildClinicRoom();
 
-            // Orbit Controls
-            const onMove = (x, y) => {
-                if (!isMouseDown) return;
-                const dx = x - mouseX;
-                const dy = y - mouseY;
-                cameraAngleX -= dx * 0.008;
-                cameraAngleY = Math.max(0.1, Math.min(Math.PI / 2.2, cameraAngleY + dy * 0.008));
-                mouseX = x;
-                mouseY = y;
-            };
+            // Spawn First 3D Dental Chair Unit & Patient
+            spawn3DChairUnit();
 
+            // Spawn Doctor Character
+            spawn3DDoctorCharacter();
+
+            // Drag Camera Controls
             container.addEventListener('mousedown', (e) => { isMouseDown = true; mouseX = e.clientX; mouseY = e.clientY; });
             window.addEventListener('mouseup', () => isMouseDown = false);
-            container.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-
-            container.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1) {
-                    isMouseDown = true;
-                    mouseX = e.touches[0].clientX;
-                    mouseY = e.touches[0].clientY;
-                }
-            });
-            window.addEventListener('touchend', () => isMouseDown = false);
-            container.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
+            container.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+                const dx = e.clientX - mouseX;
+                const dy = e.clientY - mouseY;
+                cameraAngleX -= dx * 0.005;
+                cameraAngleY = Math.max(0.15, Math.min(Math.PI / 2.3, cameraAngleY + dy * 0.005));
+                mouseX = e.clientX;
+                mouseY = e.clientY;
             });
 
-            container.addEventListener('click', () => trigger3DAttack(1));
+            // Keyboard Controls for Doctor Movement
+            window.addEventListener('keydown', (e) => { keysPressed[e.key.toLowerCase()] = true; });
+            window.addEventListener('keyup', (e) => { keysPressed[e.key.toLowerCase()] = false; });
 
-            // Animation Render Loop
+            // Touch / On-screen D-Pad Controls
+            setupTouchDPad();
+
+            // Zoom Control
+            container.addEventListener('wheel', (e) => {
+                cameraDistance = Math.max(6, Math.min(25, cameraDistance + e.deltaY * 0.01));
+            });
+
+            // Window Resize Handling
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Animation Loop
             function animate() {
                 requestAnimationFrame(animate);
 
-                if (bossMesh) {
-                    bossMesh.rotation.y += 0.01;
-                    bossMesh.rotation.x += 0.005;
-                }
+                // Handle Doctor Character Walking Movement
+                updateDoctorMovement();
 
-                const dist = 18;
-                camera.position.x = dist * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
-                camera.position.z = dist * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
-                camera.position.y = dist * Math.sin(cameraAngleY);
-                camera.lookAt(0, 3, 0);
+                // Update Camera Orbit Position following Doctor Position
+                const targetX = doctorGroup ? doctorGroup.position.x : 0;
+                const targetZ = doctorGroup ? doctorGroup.position.z : 0;
+
+                camera.position.x = targetX + cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
+                camera.position.z = targetZ + cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+                camera.position.y = cameraDistance * Math.sin(cameraAngleY);
+                camera.lookAt(targetX, 1.2, targetZ);
+
+                // Idle Animations for Staff Characters
+                const time = Date.now() * 0.003;
+                animatedStaffList.forEach((staff, idx) => {
+                    staff.position.y = 0.9 + Math.sin(time + idx) * 0.05;
+                    staff.rotation.y += 0.01;
+                });
 
                 renderer.render(scene, camera);
             }
 
             animate();
+        }
+
+        // Setup Virtual Controller Touch/Click Handlers
+        function setupTouchDPad() {
+            const bindBtn = (id, key) => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                const start = (e) => { e.preventDefault(); keysPressed[key] = true; };
+                const end = (e) => { e.preventDefault(); keysPressed[key] = false; };
+                btn.addEventListener('mousedown', start);
+                btn.addEventListener('mouseup', end);
+                btn.addEventListener('touchstart', start);
+                btn.addEventListener('touchend', end);
+            };
+            bindBtn('btnUp', 'arrowup');
+            bindBtn('btnDown', 'arrowdown');
+            bindBtn('btnLeft', 'arrowleft');
+            bindBtn('btnRight', 'arrowright');
+        }
+
+        // Update Doctor Movement Logic per frame
+        function updateDoctorMovement() {
+            if (!doctorGroup) return;
+
+            let moveX = 0;
+            let moveZ = 0;
+
+            if (keysPressed['w'] || keysPressed['arrowup']) moveZ -= 1;
+            if (keysPressed['s'] || keysPressed['arrowdown']) moveZ += 1;
+            if (keysPressed['a'] || keysPressed['arrowleft']) moveX -= 1;
+            if (keysPressed['d'] || keysPressed['arrowright']) moveX += 1;
+
+            if (moveX !== 0 || moveZ !== 0) {
+                const speed = 0.12;
+                // Normalize vector
+                const len = Math.hypot(moveX, moveZ);
+                const dirX = (moveX / len) * speed;
+                const dirZ = (moveZ / len) * speed;
+
+                // Move doctor inside clinic bounds
+                doctorGroup.position.x = Math.max(-12, Math.min(12, doctorGroup.position.x + dirX));
+                doctorGroup.position.z = Math.max(-10, Math.min(10, doctorGroup.position.z + dirZ));
+
+                // Rotate Doctor facing moving direction
+                doctorGroup.rotation.y = Math.atan2(dirX, dirZ);
+
+                // Walking Bounce animation
+                doctorGroup.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 0.1;
+            } else {
+                doctorGroup.position.y = 0;
+            }
+        }
+
+        // Build 3D Clinic Architecture
+        function buildClinicRoom() {
+            // Floor (Medical Clean Tiles)
+            const floorGeo = new THREE.PlaneGeometry(28, 24);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.2, metalness: 0.1 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Tile Grid Lines
+            const grid = new THREE.GridHelper(28, 28, 0x14b8a6, 0x334155);
+            grid.position.y = 0.01;
+            scene.add(grid);
+
+            // Walls (Cyan Tinted Glass Walls)
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+            const backWall = new THREE.Mesh(new THREE.BoxGeometry(28, 8, 0.4), wallMat);
+            backWall.position.set(0, 4, -12);
+            scene.add(backWall);
+
+            // Reception Counter (Front Left)
+            const counterGeo = new THREE.BoxGeometry(4, 1.4, 1.2);
+            const counterMat = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.3 });
+            const counter = new THREE.Mesh(counterGeo, counterMat);
+            counter.position.set(-8, 0.7, 6);
+            counter.castShadow = true;
+            scene.add(counter);
+
+            // Waiting Room Sofa (Back Right)
+            const sofaGeo = new THREE.BoxGeometry(5, 0.6, 1.5);
+            const sofaMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+            const sofa = new THREE.Mesh(sofaGeo, sofaMat);
+            sofa.position.set(7, 0.3, 7);
+            scene.add(sofa);
+        }
+
+        // Spawn 3D Dental Chair Unit & Dedicated Patient Model
+        function spawn3DChairUnit() {
+            const chairIdx = chairGroups.length;
+            if (!activePatientsState[chairIdx]) {
+                initChairPatient(chairIdx);
+            }
+            const patientData = activePatientsState[chairIdx];
+
+            const chairGroup = new THREE.Group();
+
+            // Base Column
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.8, 1, 0.8, 16),
+                new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.7 })
+            );
+            base.position.y = 0.4;
+            chairGroup.add(base);
+
+            // Seat (Cyan Blue)
+            const seat = new THREE.Mesh(
+                new THREE.BoxGeometry(1.6, 0.3, 3.2),
+                new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 })
+            );
+            seat.position.y = 0.9;
+            chairGroup.add(seat);
+
+            // Backrest
+            const back = new THREE.Mesh(
+                new THREE.BoxGeometry(1.6, 2.2, 0.3),
+                new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 })
+            );
+            back.position.set(0, 1.8, -1.3);
+            back.rotation.x = -0.3;
+            chairGroup.add(back);
+
+            // Light Pole
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.06, 0.06, 4, 8),
+                new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8 })
+            );
+            pole.position.set(1.2, 2, -0.4);
+            chairGroup.add(pole);
+
+            // Light Head
+            const lamp = new THREE.Mesh(
+                new THREE.SphereGeometry(0.4, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.9 })
+            );
+            lamp.position.set(1.2, 3.8, 0.4);
+            chairGroup.add(lamp);
+
+            // 3D Patient Character lying on this Chair
+            const patientGroup = create3DHumanModel(patientData.shirtColor, 0xffedd5);
+            patientGroup.position.set(0, 1.2, 0);
+            patientGroup.rotation.x = -Math.PI / 2.5; // Lying back position
+            chairGroup.add(patientGroup);
+
+            // Offset position based on unit index (arranged side-by-side)
+            const offsetX = (chairIdx * 4.5) - 3;
+            chairGroup.position.set(offsetX, 0, 0);
+
+            scene.add(chairGroup);
+
+            chairGroups.push(chairGroup);
+            patientMeshes.push(patientGroup.children[0]); // Torso mesh reference for color change
+
+            renderChairSelectors();
+        }
+
+        // Spawn 3D Doctor Character
+        function spawn3DDoctorCharacter() {
+            doctorGroup = create3DHumanModel(0xffffff, 0xffedd5); // White Doctor Coat
+            doctorGroup.position.set(0, 0, 4);
+            scene.add(doctorGroup);
+        }
+
+        // Spawn 3D Staff Character (Hygienist/Dentist)
+        function spawn3DStaffCharacter(type) {
+            const color = type === 'hygienist' ? 0xf472b6 : 0x06b6d4;
+            const staff = create3DHumanModel(color, 0xffedd5);
+            staff.position.set(-6 + Math.random() * 12, 0, 3 + Math.random() * 4);
+            scene.add(staff);
+            animatedStaffList.push(staff);
+        }
+
+        // Helper: Create 3D Stylized Human Character Model (Head, Body, Arms)
+        function create3DHumanModel(shirtHex, skinHex) {
+            const character = new THREE.Group();
+
+            // Head
+            const headMat = new THREE.MeshStandardMaterial({ color: skinHex, roughness: 0.5 });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), headMat);
+            head.position.y = 1.9;
+            head.castShadow = true;
+            character.add(head);
+
+            // Torso (Shirt)
+            const shirtMat = new THREE.MeshStandardMaterial({ color: shirtHex, roughness: 0.4 });
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.4, 0.9, 12), shirtMat);
+            torso.position.y = 1.1;
+            torso.castShadow = true;
+            character.add(torso);
+
+            // Legs
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b });
+            const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.7, 12), legMat);
+            legs.position.y = 0.35;
+            character.add(legs);
+
+            return character;
+        }
+
+        // Animate Treatment Interaction for specific chair
+        function animateTreatmentAction(chairIdx) {
+            if (doctorGroup) {
+                doctorGroup.position.z += 0.2;
+                setTimeout(() => doctorGroup.position.z -= 0.2, 150);
+            }
+            if (chairGroups[chairIdx]) {
+                chairGroups[chairIdx].rotation.y += 0.1;
+                setTimeout(() => chairGroups[chairIdx].rotation.y -= 0.1, 150);
+            }
         }
     </script>
 </body>
