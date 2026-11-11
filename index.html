@@ -2,844 +2,755 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 歯医者さん経営シミュレーション</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>歯医者さん経営シミュレーション 3D</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Three.js Library -->
+    <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
+        body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
             -webkit-user-select: none;
         }
         #canvas-container {
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
         }
-        /* Custom UI Shadows and Styling */
+        /* Glassmorphism Styling */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(15, 23, 42, 0.82);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.12);
         }
         .btn-action {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 14px 0 rgba(0, 0, 0, 0.35);
         }
         .btn-action:active {
             transform: scale(0.95);
         }
-        /* Progress Bar Animation */
-        .progress-bar-fill {
-            transition: width 0.1s linear;
-        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-800" oncontextmenu="return false;">
+<body class="bg-slate-900 text-slate-100" oncontextmenu="return false;">
 
-    <!-- 3D Canvas Container -->
+    <!-- 3D Scene Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay (Z-Index 10) -->
-    <div class="relative z-10 flex flex-col justify-between h-screen p-4 pointer-events-none">
-
-        <!-- Header Bar -->
-        <header class="flex justify-between items-start pointer-events-auto">
-            <!-- Left: Clinic Info & Stats -->
-            <div class="glass-panel rounded-2xl p-4 shadow-xl flex items-center space-x-6">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">
-                        <i class="fa-solid fa-tooth"></i>
-                    </div>
-                    <div>
-                        <h1 class="font-bold text-lg text-slate-900 leading-tight">スマイル歯科クリニック</h1>
-                        <p class="text-xs text-slate-500 font-medium">Dr. プレイヤー の医院</p>
-                    </div>
-                </div>
-
-                <div class="h-8 w-px bg-slate-200"></div>
-
-                <!-- Money -->
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
-                        <i class="fa-solid fa-yen-sign"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs text-slate-400 font-semibold">所持金</div>
-                        <div id="ui-money" class="text-lg font-black text-slate-800">¥1,000,000</div>
-                    </div>
-                </div>
-
-                <!-- Reputation -->
-                <div class="flex items-center space-x-2">
-                    <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-sm font-bold">
-                        <i class="fa-solid fa-star"></i>
-                    </div>
-                    <div>
-                        <div class="text-xs text-slate-400 font-semibold">医院の評判</div>
-                        <div id="ui-reputation" class="text-lg font-black text-slate-800">4.5 <span class="text-xs text-slate-400">/ 5.0</span></div>
-                    </div>
+    <!-- Top Status Bar (Money, Reputation, Auto-Save status) -->
+    <div class="fixed top-3 left-3 right-3 flex justify-between items-center z-20 pointer-events-none">
+        <div class="flex items-center gap-2">
+            <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto">
+                <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
+                <div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">資金</div>
+                    <div id="ui-money" class="text-base font-extrabold text-amber-300">¥100,000</div>
                 </div>
             </div>
-
-            <!-- Right: Management Menu Buttons -->
-            <div class="glass-panel rounded-2xl p-2 shadow-xl flex space-x-2 pointer-events-auto">
-                <button onclick="openModal('menu-modal')" class="btn-action bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 px-4 rounded-xl shadow flex items-center space-x-2">
-                    <i class="fa-solid fa-store"></i>
-                    <span>設備・求人</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- Middle Left: Dental Chair Selector Toolbar (画面左中央に配置) -->
-        <div class="absolute left-4 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2 pointer-events-auto">
-            <div class="text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-1 px-1">診察台 切替</div>
-            <div id="chair-selector-container" class="flex flex-col space-y-2">
-                <!-- Chair selection buttons generated dynamically -->
+            <div class="glass-panel px-4 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto">
+                <i class="fa-solid fa-star text-yellow-400 text-lg"></i>
+                <div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">クリニック評判</div>
+                    <div id="ui-reputation" class="text-base font-extrabold text-yellow-300">4.5</div>
+                </div>
             </div>
         </div>
 
-        <!-- Left Bottom: D-Pad Controls for Doctor Movement (スマホ/タッチ/画面操作用) -->
-        <div class="absolute bottom-6 left-6 pointer-events-auto flex flex-col items-center select-none opacity-80 hover:opacity-100 transition-opacity">
-            <div class="text-[10px] font-bold text-slate-400 mb-1">ドクター移動 (キーボードWASD可)</div>
-            <div class="grid grid-cols-3 gap-1 bg-slate-800/60 backdrop-blur-md p-2 rounded-2xl border border-slate-700/50 shadow-2xl">
-                <div></div>
-                <button onmousedown="startMove('up')" onmouseup="stopMove()" ontouchstart="startMove('up')" ontouchend="stopMove()" class="w-11 h-11 bg-slate-700 hover:bg-slate-600 active:bg-teal-500 text-white rounded-xl flex items-center justify-center text-lg shadow">▲</button>
-                <div></div>
-                <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()" class="w-11 h-11 bg-slate-700 hover:bg-slate-600 active:bg-teal-500 text-white rounded-xl flex items-center justify-center text-lg shadow">◀</button>
-                <button onmousedown="startMove('down')" onmouseup="stopMove()" ontouchstart="startMove('down')" ontouchend="stopMove()" class="w-11 h-11 bg-slate-700 hover:bg-slate-600 active:bg-teal-500 text-white rounded-xl flex items-center justify-center text-lg shadow">▼</button>
-                <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()" class="w-11 h-11 bg-slate-700 hover:bg-slate-600 active:bg-teal-500 text-white rounded-xl flex items-center justify-center text-lg shadow">▶</button>
-            </div>
-        </div>
-
-        <!-- Right Bottom: Sticky Patient Info Card & Treatment Action (画面右下にコンパクト配置) -->
-        <div class="absolute bottom-6 right-6 pointer-events-auto flex flex-col items-end">
-            <!-- Patient Info Card & Action Container -->
-            <div class="glass-panel rounded-2xl p-4 shadow-2xl border border-teal-100/60 max-w-xs w-72 flex flex-col space-y-3">
-                <!-- Patient Info Header -->
-                <div class="flex items-center space-x-3 pb-2 border-b border-slate-100">
-                    <div id="active-patient-avatar" class="w-10 h-10 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center text-lg font-bold shadow-inner">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex justify-between items-center">
-                            <h3 id="active-patient-name" class="font-bold text-sm text-slate-800 truncate">患者さんを待機中...</h3>
-                            <span id="active-chair-label" class="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full">台 #2</span>
-                        </div>
-                        <p id="active-patient-condition" class="text-xs text-rose-500 font-semibold truncate">虫歯の治療が必要</p>
-                    </div>
-                </div>
-
-                <!-- Estimated Time & Earnings info badges -->
-                <div class="flex justify-between items-center text-xs bg-slate-50/80 p-2 rounded-xl border border-slate-100">
-                    <div class="flex items-center space-x-1 text-slate-500">
-                        <i class="fa-regular fa-clock"></i>
-                        <span>治療時間:</span>
-                        <strong id="ui-patient-time" class="text-slate-700">約 1.5 秒</strong>
-                    </div>
-                    <div class="flex items-center space-x-1 text-emerald-600 font-bold">
-                        <i class="fa-solid fa-yen-sign"></i>
-                        <span id="ui-patient-reward">+¥12,000</span>
-                    </div>
-                </div>
-
-                <!-- Treatment Progress Bar -->
-                <div id="treatment-progress-container" class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden hidden">
-                    <div id="treatment-progress-bar" class="bg-gradient-to-r from-teal-400 to-emerald-500 h-full w-0 progress-bar-fill"></div>
-                </div>
-
-                <!-- Proximity Warning or Action Button -->
-                <div id="proximity-warning" class="text-center text-xs text-amber-600 font-bold py-2 bg-amber-50 rounded-xl border border-amber-200">
-                    <i class="fa-solid fa-shoe-prints mr-1"></i>診察台の近くへ移動してください
-                </div>
-
-                <!-- Treatment Execute Button -->
-                <button id="btn-treat-action" onclick="performSingleTreatment()" class="btn-action hidden w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-black py-3 px-4 rounded-xl shadow-lg flex items-center justify-center space-x-2 text-base">
-                    <i class="fa-solid fa-hand-holding-medical"></i>
-                    <span>診察・治療を開始！</span>
-                </button>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Management Modal Dialog -->
-    <div id="menu-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden">
-        <div class="glass-panel rounded-3xl p-6 shadow-2xl max-w-md w-full m-4 border border-white/60">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-slate-800"><i class="fa-solid fa-hospital-user text-teal-500 mr-2"></i>クリニックの拡充</h2>
-                <button onclick="closeModal('menu-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-
-            <div class="space-y-4">
-                <!-- Buy New Chair Unit -->
-                <div class="bg-white/80 p-4 rounded-2xl border border-slate-100 flex justify-between items-center">
-                    <div>
-                        <h4 class="font-bold text-slate-800">診察ユニット増設</h4>
-                        <p class="text-xs text-slate-500">新しい診察チェアーを増設します</p>
-                        <p class="text-xs text-emerald-600 font-bold mt-1">費用: ¥300,000</p>
-                    </div>
-                    <button onclick="buyChair()" class="btn-action bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-xl text-sm shadow">
-                        増設する
-                    </button>
-                </div>
-
-                <!-- Hire Staff -->
-                <div class="bg-white/80 p-4 rounded-2xl border border-slate-100 flex justify-between items-center">
-                    <div>
-                        <h4 class="font-bold text-slate-800">治療スタッフ雇用 (衛生士)</h4>
-                        <p class="text-xs text-slate-500">チェアーを巡回して自動で治療します</p>
-                        <p class="text-xs text-emerald-600 font-bold mt-1">費用: ¥200,000</p>
-                    </div>
-                    <button onclick="hireStaff()" class="btn-action bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl text-sm shadow">
-                        雇用する
-                    </button>
-                </div>
-            </div>
+        <div class="glass-panel px-3 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto">
+            <button onclick="saveGameState(true)" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1 px-3 rounded-xl transition">
+                <i class="fa-solid fa-floppy-disk mr-1"></i>保存
+            </button>
+            <span id="save-indicator" class="text-[10px] text-emerald-400 font-bold hidden animate-pulse">保存完了</span>
         </div>
     </div>
 
-    <!-- Patient Feedback Modal Dialog -->
-    <div id="feedback-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden">
-        <div class="glass-panel rounded-3xl p-6 shadow-2xl max-w-md w-full m-4 border border-teal-200">
-            <div class="text-center mb-4">
-                <div class="w-16 h-16 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-2 shadow-inner">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-                <h3 class="text-xl font-black text-slate-800">治療が完了しました！</h3>
-                <p id="modal-reward-text" class="text-base text-emerald-600 font-bold mt-1">+¥12,000 を獲得</p>
-            </div>
+    <!-- Keyboard & Touch Controls Hint Overlay (Top Left, no overlap) -->
+    <div class="fixed top-16 left-3 z-20 glass-panel px-3 py-1.5 rounded-xl text-[11px] font-bold text-slate-300 flex items-center gap-2 pointer-events-none">
+        <i class="fa-solid fa-gamepad text-cyan-400 text-sm"></i>
+        <span>[WASD / 矢印キー] 移動 | [Shift] Shift Lock (<span id="shift-lock-status" class="text-rose-400">OFF</span>)</span>
+    </div>
 
-            <!-- Patient Feedback Bubble -->
-            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-6 relative">
-                <div class="text-xs font-bold text-slate-400 mb-1 flex justify-between">
-                    <span>患者さんの感想</span>
-                    <span id="modal-patient-stars" class="text-amber-400">★★★★★</span>
-                </div>
-                <p id="modal-patient-comment" class="text-sm text-slate-700 italic">「痛くなくて本当に助かりました！また来ます！」</p>
-            </div>
+    <!-- Middle-Left: Chair Switcher Toolbar (Moved slightly down to avoid overlapping the guide) -->
+    <div class="fixed left-3 top-32 z-20 flex flex-col gap-2">
+        <div class="text-[11px] font-bold text-slate-300 px-2 glass-panel py-1 rounded-lg text-center">
+            <i class="fa-solid fa-chair mr-1 text-cyan-400"></i>診察台
+        </div>
+        <div id="chair-selector-list" class="flex flex-col gap-2">
+            <!-- Rendered dynamically -->
+        </div>
+        <button onclick="buyNewChair()" id="btn-buy-chair" class="glass-panel hover:bg-emerald-600/40 text-emerald-300 text-xs font-bold p-2.5 rounded-2xl border border-emerald-500/30 flex flex-col items-center gap-1 transition btn-action">
+            <i class="fa-solid fa-plus-circle text-lg"></i>
+            <span>チェアー増設</span>
+            <span id="ui-chair-cost" class="text-[9px] text-slate-300">¥50,000</span>
+        </button>
+    </div>
 
-            <button onclick="closeModal('feedback-modal')" class="btn-action w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow">
-                次の患者さんを診察
+    <!-- Bottom Left: Staff Hiring Toolbar (Solo Doctor + Default Receptionist mode) -->
+    <div class="fixed bottom-3 left-3 z-20 flex gap-2">
+        <button onclick="hireStaff('doctor')" class="glass-panel hover:bg-slate-800 text-emerald-300 text-xs font-bold p-3 rounded-2xl flex items-center gap-2 border border-emerald-500/30 transition btn-action">
+            <i class="fa-solid fa-user-doctor text-lg"></i>
+            <div class="text-left">
+                <div>治療アシスタント雇用</div>
+                <div class="text-[10px] text-slate-400">¥40,000 (現在: <span id="ui-doctor-staff-count">0</span>名)</div>
+            </div>
+        </button>
+    </div>
+
+    <!-- Bottom Right: Compact Patient Treatment Panel -->
+    <div class="fixed bottom-3 right-3 z-20 w-72 glass-panel p-3.5 rounded-3xl shadow-2xl border border-slate-700/60">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-700/50 mb-2">
+            <div class="flex items-center gap-2">
+                <span id="patient-icon" class="text-2xl">👤</span>
+                <div>
+                    <h3 id="patient-name" class="text-sm font-bold text-white">佐藤 健一 様</h3>
+                    <p id="patient-symptom" class="text-[11px] text-amber-400 font-medium">虫歯治療・定期検診</p>
+                </div>
+            </div>
+            <span id="chair-badge" class="bg-cyan-500/20 text-cyan-300 text-[10px] font-bold px-2 py-0.5 rounded-full border border-cyan-500/30">台 #1</span>
+        </div>
+
+        <!-- Treatment Progress Bar -->
+        <div id="treatment-progress-container" class="mb-3 hidden">
+            <div class="flex justify-between text-[11px] font-bold mb-1">
+                <span class="text-emerald-400"><i class="fa-solid fa-gear fa-spin mr-1"></i>治療進行中...</span>
+                <span id="treatment-progress-text" class="text-white">0%</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
+                <div id="treatment-progress-bar" class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full rounded-full transition-all duration-100" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Distance Alert or Action Button -->
+        <div id="distance-alert" class="text-center py-2 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300 text-xs font-bold">
+            <i class="fa-solid fa-person-walking mr-1"></i>診察台の近くへ移動してください
+        </div>
+
+        <button id="btn-treat-action" onclick="window.performSingleTreatment()" class="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs rounded-2xl transition btn-action flex items-center justify-center gap-2 hidden">
+            <i class="fa-solid fa-tooth text-sm"></i>
+            <span>診察・治療を実行 (E)</span>
+        </button>
+    </div>
+
+    <!-- Modal Dialog -->
+    <div id="game-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel max-w-sm w-full p-5 rounded-3xl border border-slate-700 shadow-2xl text-center space-y-4">
+            <h2 id="modal-title" class="text-lg font-black text-white"></h2>
+            <div id="modal-body" class="text-xs text-slate-300"></div>
+            <button onclick="closeModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-2xl transition">
+                次へ進む
             </button>
         </div>
     </div>
 
-    <!-- MAIN JAVASCRIPT GAME LOGIC -->
     <script>
-        // --- GAME STATE ---
-        let money = 1000000;
-        let reputation = 4.5;
-        let activeChairIndex = 0; // Starts from 0 (UI shows Chair #2)
-        let isTreating = false;
+        // --- Global Error Handlers & Helper Setup ---
+        window.performSingleTreatment = function() {
+            if (typeof startSingleTreatment === 'function') {
+                startSingleTreatment();
+            }
+        };
 
-        // Chairs Data (台#1はUI上非表示、表示は #2 からスタート)
+        // Shift Lock State
+        let isShiftLocked = false;
+
+        function toggleShiftLock() {
+            isShiftLocked = !isShiftLocked;
+            const statusEl = document.getElementById('shift-lock-status');
+            if (statusEl) {
+                if (isShiftLocked) {
+                    statusEl.innerText = 'ON';
+                    statusEl.className = 'text-emerald-400 font-extrabold animate-pulse';
+                } else {
+                    statusEl.innerText = 'OFF';
+                    statusEl.className = 'text-rose-400';
+                }
+            }
+        }
+
+        function openModal(title, content) {
+            document.getElementById('modal-title').innerHTML = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('game-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('game-modal').classList.add('hidden');
+        }
+
+        // --- Human Patient Templates & Data ---
+        const humanPatients = [
+            { name: "田中 さくら 様", type: "会社員 (30代)", icon: "👩", symptom: "虫歯治療・痛み相談", reward: 12000, feedback: "とても手際よく治療してくれて痛くなかったです！ありがとうございます。" },
+            { name: "佐藤 健一 様", type: "自営業 (40代)", icon: "👨", symptom: "定期検診・歯石除去", reward: 15000, feedback: "先生の説明がすごく分かりやすくて安心できました。" },
+            { name: "鈴木 結衣 様", type: "学生 (20代)", icon: "👩‍🎓", symptom: "ホワイトニング相談", reward: 18000, feedback: "歯がすごくキレイになって大満足です！また来ます。" },
+            { name: "高橋 蓮 様", type: "小学生 (10代)", icon: "👦", symptom: "フッ素塗布・予防歯科", reward: 10000, feedback: "優しく話しかけてくれて全然怖くなかったよ！" },
+            { name: "伊藤 はな 様", type: "主婦 (50代)", icon: "👩‍🦰", symptom: "歯ぐきケア・知覚過敏", reward: 14000, feedback: "落ち着いた雰囲気でリラックスして受診できました。" },
+            { name: "渡辺 誠 様", type: "シニア (70代)", icon: "👴", symptom: "入れ歯調整・検診", reward: 16000, feedback: "ぴったり噛み合うようになって食事が楽しくなりました。" }
+        ];
+
+        // --- Game State & Auto Save ---
+        let gameState = {
+            money: 100000,
+            reputation: 4.5,
+            purchasedChairsCount: 1, // 最初に解放されているのは1台のみ
+            receptionStaffCount: 1,  // 最初から1名常駐
+            doctorStaffCount: 0,
+            activeChairId: 1
+        };
+
+        function loadGameState() {
+            try {
+                const saved = localStorage.getItem('dental_clinic_save_v2');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    gameState = { ...gameState, ...parsed };
+                    // 受付スタッフは最低1人保障
+                    if (gameState.receptionStaffCount < 1) {
+                        gameState.receptionStaffCount = 1;
+                    }
+                }
+            } catch(e) { console.error("Save load error", e); }
+        }
+
+        function saveGameState(showNotice = false) {
+            try {
+                localStorage.setItem('dental_clinic_save_v2', JSON.stringify(gameState));
+                if (showNotice) {
+                    const indicator = document.getElementById('save-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('hidden');
+                        setTimeout(() => indicator.classList.add('hidden'), 2000);
+                    }
+                }
+            } catch(e) {}
+        }
+
+        // --- Chairs Setup ---
         const chairsData = [
-            { id: 0, label: "診察台 #2", xPos: -3, installed: true, patient: null },
-            { id: 1, label: "診察台 #3", xPos: 3, installed: true, patient: null },
-            { id: 2, label: "診察台 #4", xPos: 9, installed: false, patient: null },
+            { id: 1, name: "診察台 #1", xPos: -6, occupied: true, patient: { ...humanPatients[0] } },
+            { id: 2, name: "診察台 #2", xPos: -1, occupied: false, patient: null },
+            { id: 3, name: "診察台 #3", xPos: 4, occupied: false, patient: null },
+            { id: 4, name: "診察台 #4", xPos: 9, occupied: false, patient: null },
+            { id: 5, name: "診察台 #5", xPos: 14, occupied: false, patient: null }
         ];
 
-        // Patient Templates & Comments
-        const patientTemplates = [
-            { name: "山田 太郎", icon: "fa-user-tie", condition: "重度の虫歯治療", duration: 2.0, reward: 15000, comment: "手際が良くて全然痛くありませんでした！感謝しています。", stars: "★★★★★" },
-            { name: "佐藤 花子", icon: "fa-user-nurse", condition: "歯石除去・クリーニング", duration: 1.2, reward: 8000, comment: "歯がピカピカツルツルになりました！また定期健診に来ます。", stars: "★★★★★" },
-            { name: "鈴木 一郎", icon: "fa-user-graduate", condition: "親知らずの抜歯", duration: 2.5, reward: 22000, comment: "すばやい処置で助かりました。評判通りの名医ですね。", stars: "★★★★★" },
-            { name: "高橋 健太", icon: "fa-child", condition: "乳歯の点検・フッ素布", duration: 1.0, reward: 6000, comment: "全然こわくなかったよ！歯医者さんありがとう！", stars: "★★★★★" },
-            { name: "伊藤 美咲", icon: "fa-user-doctor", condition: "知覚過敏の治療", duration: 1.5, reward: 10000, comment: "親切に説明しながら治療してくれたので安心して受けられました。", stars: "★★★★☆" }
-        ];
-
-        // Staff Data
-        let hiredStaffCount = 0;
-        let receptionStaffMesh = null;
-        let staffMeshes = [];
-
-        // 3D Scene Variables
+        // --- Three.js Globals ---
         let scene, camera, renderer;
         let doctorMesh;
-        let doctorPos = { x: 0, z: 2 };
-        let doctorMoveKey = { up: false, down: false, left: false, right: false };
+        let doctorTargetPos = { x: 0, z: 2 };
+        let patientMeshes = {};
+        let staffMeshes = [];
+        let receptionStaffMesh = null;
 
-        let patientMeshes = [];
-        let entranceMesh, exitMesh;
-        let receptionSign;
-        let isSomeoneAtReception = false;
+        // Camera Control Variables
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraAngle = 0;
+        let cameraRadius = 16;
+        let cameraHeight = 11;
 
-        // Camera Orbit Controls
-        let isMouseDown = false;
-        let mouseX = 0, mouseY = 0;
-        let cameraAngleX = 0;
-        let cameraAngleY = 0.6;
-        let cameraDistance = 18;
+        // Player Movement Controls
+        const keysPressed = {};
 
-        // Init Game on Window Load
+        // Treatment State
+        let isTreating = false;
+
+        // Initialize Application on Window Load
         window.onload = function() {
+            loadGameState();
             init3DScene();
-            initControls();
-            initPatients();
             renderChairSelectors();
             updateUI();
+            setupControls();
+
+            // Auto Save Interval continuously every 1s
+            setInterval(() => saveGameState(false), 1000);
+
+            // Animation Loop
             animate();
         };
 
-        // --- Initialize Three.js 3D World ---
+        // --- 3D Scene Initialization ---
         function init3DScene() {
             const container = document.getElementById('canvas-container');
-
-            // Scene & Camera
+            
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf1f5f9);
+            scene.background = new THREE.Color(0x0f172a);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            updateCameraPosition();
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             container.appendChild(renderer.domElement);
 
-            // Lighting
+            // Lights
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            dirLight.position.set(15, 25, 15);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 15);
             dirLight.castShadow = true;
             scene.add(dirLight);
 
             // Floor
-            const floorGeo = new THREE.PlaneGeometry(36, 24);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+            const floorGeo = new THREE.PlaneGeometry(36, 20);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
             floor.receiveShadow = true;
             scene.add(floor);
 
-            // Setup Walls, Doors, Reception Desk, Staff
-            createWallsAndDoors();
-            createReceptionDesk();
-            spawnReceptionistStaff();
-            spawn3DDoctorCharacter();
+            // Walls
+            const backWallGeo = new THREE.BoxGeometry(36, 6, 0.5);
+            const backWallMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+            const backWall = new THREE.Mesh(backWallGeo, backWallMat);
+            backWall.position.set(0, 3, -10);
+            scene.add(backWall);
 
-            // Spawn Initial Chairs
-            chairsData.forEach((chair, idx) => {
-                if (chair.installed) {
-                    spawn3DChairUnit(idx, chair.xPos);
+            // Entrance Door (IN & OUT)
+            createDoor(-14, "出入口 (IN & OUT)", 0x10b981);
+
+            // Reception Desk
+            createReceptionDesk();
+
+            // Create Dental Chairs & Patients (初期購入数分のみ生成)
+            chairsData.forEach((chair, index) => {
+                if (index < gameState.purchasedChairsCount) {
+                    if (!chair.patient && humanPatients[index]) {
+                        chair.patient = { ...humanPatients[index] };
+                        chair.occupied = true;
+                    }
+                    createDentalChair(chair);
                 }
             });
+
+            // Create Doctor Mesh
+            createDoctor();
+
+            // Create Staff
+            updateStaffMeshes();
 
             window.addEventListener('resize', onWindowResize);
         }
 
-        // --- Walls, Entrance (IN) & Exit (OUT) ---
-        function createWallsAndDoors() {
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0xcbdfbd });
-
-            // Back Wall
-            const backWallGeo = new THREE.BoxGeometry(36, 6, 0.5);
-            const backWall = new THREE.Mesh(backWallGeo, wallMat);
-            backWall.position.set(0, 3, -10);
-            scene.add(backWall);
-
-            // Entrance (IN) Door - Left Side
-            const entGroup = new THREE.Group();
-            const entGeo = new THREE.BoxGeometry(2.5, 4.5, 0.2);
-            const entMat = new THREE.MeshStandardMaterial({ color: 0x10b981, transparent: true, opacity: 0.8 });
-            const entDoor = new THREE.Mesh(entGeo, entMat);
-            entDoor.position.y = 2.25;
-            entGroup.add(entDoor);
-
-            // Entrance Sign Indicator
-            const entSignGeo = new THREE.BoxGeometry(2.5, 0.6, 0.3);
-            const entSignMat = new THREE.MeshStandardMaterial({ color: 0x059669 });
-            const entSign = new THREE.Mesh(entSignGeo, entSignMat);
-            entSign.position.set(0, 4.8, 0);
-            entGroup.add(entSign);
-
-            entGroup.position.set(-15, 0, -9.8);
-            scene.add(entGroup);
-            entranceMesh = entGroup;
-
-            // Exit (OUT) Door - Right Side
-            const extGroup = new THREE.Group();
-            const extGeo = new THREE.BoxGeometry(2.5, 4.5, 0.2);
-            const extMat = new THREE.MeshStandardMaterial({ color: 0xf97316, transparent: true, opacity: 0.8 });
-            const extDoor = new THREE.Mesh(extGeo, extMat);
-            extDoor.position.y = 2.25;
-            extGroup.add(extDoor);
-
-            const extSignGeo = new THREE.BoxGeometry(2.5, 0.6, 0.3);
-            const extSignMat = new THREE.MeshStandardMaterial({ color: 0xea580c });
-            const extSign = new THREE.Mesh(extSignGeo, extSignMat);
-            extSign.position.set(0, 4.8, 0);
-            extGroup.add(extSign);
-
-            extGroup.position.set(15, 0, -9.8);
-            scene.add(extGroup);
-            exitMesh = extGroup;
+        function createDoor(x, labelText, colorHex) {
+            const doorGeo = new THREE.BoxGeometry(2.5, 4.5, 0.2);
+            const doorMat = new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.8 });
+            const door = new THREE.Mesh(doorGeo, doorMat);
+            door.position.set(x, 2.25, -9.8);
+            scene.add(door);
         }
 
-        // --- Reception Desk & Dedicated Receptionist Staff ---
         function createReceptionDesk() {
             const deskGeo = new THREE.BoxGeometry(4, 1.2, 1.5);
             const deskMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
             const desk = new THREE.Mesh(deskGeo, deskMat);
-            desk.position.set(-10, 0.6, -7);
+            desk.position.set(-9, 0.6, -6);
             scene.add(desk);
-
-            const recSignGeo = new THREE.BoxGeometry(2, 0.5, 0.2);
-            const recSignMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
-            receptionSign = new THREE.Mesh(recSignGeo, recSignMat);
-            receptionSign.position.set(-10, 1.8, -7);
-            scene.add(receptionSign);
         }
 
-        function spawnReceptionistStaff() {
-            const staffGroup = new THREE.Group();
+        function createDentalChair(chair) {
+            const group = new THREE.Group();
+            group.position.set(chair.xPos, 0, -3);
 
-            const sBodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.1, 16);
-            const sBodyMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e }); // Receptionist Uniform (Pink/Coral)
-            const sBody = new THREE.Mesh(sBodyGeo, sBodyMat);
-            sBody.position.y = 0.55;
-            staffGroup.add(sBody);
+            // Chair Base
+            const baseGeo = new THREE.BoxGeometry(1.6, 0.5, 2.8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.25;
+            group.add(base);
 
-            const sHeadGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const sHeadMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-            const sHead = new THREE.Mesh(sHeadGeo, sHeadMat);
-            sHead.position.y = 1.3;
-            staffGroup.add(sHead);
+            // Chair Backrest
+            const backGeo = new THREE.BoxGeometry(1.5, 1.2, 0.3);
+            const backMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+            const back = new THREE.Mesh(backGeo, backMat);
+            back.position.set(0, 0.8, -1.2);
+            group.add(back);
 
-            const capGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.1, 16);
-            const capMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const cap = new THREE.Mesh(capGeo, capMat);
-            cap.position.y = 1.55;
-            staffGroup.add(cap);
+            scene.add(group);
 
-            staffGroup.position.set(-10, 0, -8.2);
-            scene.add(staffGroup);
-            receptionStaffMesh = staffGroup;
+            // Create Human Patient Mesh lying on Chair
+            createHumanPatient(chair);
         }
 
-        // --- Spawn Doctor Character ---
-        function spawn3DDoctorCharacter() {
-            doctorMesh = new THREE.Group();
+        function createHumanPatient(chair) {
+            if (patientMeshes[chair.id]) {
+                scene.remove(patientMeshes[chair.id]);
+            }
 
-            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+            const group = new THREE.Group();
+            group.position.set(chair.xPos, 0.65, -3);
+
+            // Body (Lying down)
+            const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.6;
-            doctorMesh.add(body);
+            body.rotation.x = Math.PI / 2;
+            group.add(body);
 
-            const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xfde047 });
             const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 1.4;
-            doctorMesh.add(head);
+            head.position.set(0, 0.15, -0.8);
+            group.add(head);
 
-            const mirrorGeo = new THREE.TorusGeometry(0.15, 0.03, 8, 16);
-            const mirrorMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, metalness: 0.8 });
-            const mirror = new THREE.Mesh(mirrorGeo, mirrorMat);
-            mirror.position.set(0, 1.6, 0.25);
-            doctorMesh.add(mirror);
+            patientMeshes[chair.id] = group;
+            scene.add(group);
+        }
 
-            doctorMesh.position.set(doctorPos.x, 0, doctorPos.z);
+        function createDoctor() {
+            const group = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x10b981 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.75;
+            group.add(body);
+
+            // Head
+            const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffedd5 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.75;
+            group.add(head);
+
+            group.position.set(0, 0, 2);
+            doctorMesh = group;
             scene.add(doctorMesh);
         }
 
-        // --- Spawn 3D Dental Chair & Patient ---
-        function spawn3DChairUnit(index, xPos) {
-            const unitGroup = new THREE.Group();
+        function updateStaffMeshes() {
+            // Clear existing staff
+            staffMeshes.forEach(s => scene.remove(s));
+            staffMeshes = [];
 
-            const baseGeo = new THREE.BoxGeometry(1.6, 0.2, 3);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = 0.1;
-            unitGroup.add(base);
+            if (receptionStaffMesh) {
+                scene.remove(receptionStaffMesh);
+                receptionStaffMesh = null;
+            }
 
-            const chairGeo = new THREE.BoxGeometry(1.4, 0.4, 2.6);
-            const chairMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9 });
-            const chair = new THREE.Mesh(chairGeo, chairMat);
-            chair.position.set(0, 0.4, 0);
-            unitGroup.add(chair);
+            // Reception Staff (Initially 1 present at reception desk)
+            if (gameState.receptionStaffCount > 0) {
+                const rGroup = new THREE.Group();
+                const rBody = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0xf43f5e }));
+                rBody.position.y = 0.7;
+                rGroup.add(rBody);
+                const rHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
+                rHead.position.y = 1.6;
+                rGroup.add(rHead);
 
-            const lightPoleGeo = new THREE.CylinderGeometry(0.05, 0.05, 2.5);
-            const lightPoleMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1 });
-            const lightPole = new THREE.Mesh(lightPoleGeo, lightPoleMat);
-            lightPole.position.set(-0.8, 1.25, -1);
-            unitGroup.add(lightPole);
+                rGroup.position.set(-9, 0, -4.5); // 受付カウンターの後ろ
+                scene.add(rGroup);
+                receptionStaffMesh = rGroup;
+            }
 
-            unitGroup.position.set(xPos, 0, -2);
-            scene.add(unitGroup);
+            // Treatment Staff (Patrolling near chairs)
+            for (let i = 0; i < gameState.doctorStaffCount; i++) {
+                const group = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x14b8a6 }));
+                body.position.y = 0.7;
+                group.add(body);
+                const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
+                head.position.y = 1.6;
+                group.add(head);
 
-            // Spawn 3D Patient Sitting on Chair
-            const patientGroup = new THREE.Group();
-
-            const pBodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.0, 16);
-            const pBodyMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
-            const pBody = new THREE.Mesh(pBodyGeo, pBodyMat);
-            pBody.rotation.x = Math.PI / 3;
-            pBody.position.set(0, 0.6, 0.2);
-            patientGroup.add(pBody);
-
-            const pHeadGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const pHeadMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-            const pHead = new THREE.Mesh(pHeadGeo, pHeadMat);
-            pHead.position.set(0, 0.9, -0.3);
-            patientGroup.add(pHead);
-
-            patientGroup.position.set(xPos, 0, -2);
-            scene.add(patientGroup);
-
-            patientMeshes[index] = patientGroup;
+                group.position.set(-1 + (i * 4), 0, -1);
+                scene.add(group);
+                staffMeshes.push(group);
+            }
         }
 
-        // --- Setup Patients ---
-        function initPatients() {
-            chairsData.forEach((chair, idx) => {
-                if (chair.installed) {
-                    chair.patient = { ...patientTemplates[idx % patientTemplates.length] };
-                }
+        // --- Controls (Mouse & Touch Camera Rotation & Zoom) ---
+        function setupControls() {
+            const container = document.getElementById('canvas-container');
+
+            container.addEventListener('pointerdown', (e) => {
+                // 右クリック(button 2)または左クリック対応
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
             });
-        }
 
-        // --- Controls & Camera Inputs ---
-        function initControls() {
+            window.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - previousMousePosition.x;
+                // 右クリック等のドラッグ方向とカメラ旋回方向を直感的な方向に反転（+deltaX）
+                cameraAngle -= deltaX * 0.005;
+                updateCameraPosition();
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('pointerup', () => isDragging = false);
+
+            container.addEventListener('wheel', (e) => {
+                cameraRadius = Math.max(8, Math.min(30, cameraRadius + e.deltaY * 0.01));
+                updateCameraPosition();
+            });
+
+            // Keyboard Movement (WASD & Arrows) & E-Key Shortcut & Shift Lock Toggle
             window.addEventListener('keydown', (e) => {
-                if (e.key === 'w' || e.key === 'ArrowUp') doctorMoveKey.up = true;
-                if (e.key === 's' || e.key === 'ArrowDown') doctorMoveKey.down = true;
-                if (e.key === 'a' || e.key === 'ArrowLeft') doctorMoveKey.left = true;
-                if (e.key === 'd' || e.key === 'ArrowRight') doctorMoveKey.right = true;
-            });
-            window.addEventListener('keyup', (e) => {
-                if (e.key === 'w' || e.key === 'ArrowUp') doctorMoveKey.up = false;
-                if (e.key === 's' || e.key === 'ArrowDown') doctorMoveKey.down = false;
-                if (e.key === 'a' || e.key === 'ArrowLeft') doctorMoveKey.left = false;
-                if (e.key === 'd' || e.key === 'ArrowRight') doctorMoveKey.right = false;
-            });
+                keysPressed[e.key.toLowerCase()] = true;
 
-            // Camera Rotation Controls
-            window.addEventListener('mousedown', (e) => {
-                if (e.button === 0 || e.button === 2) {
-                    isMouseDown = true;
-                    mouseX = e.clientX;
-                    mouseY = e.clientY;
+                if (e.key === 'Shift') {
+                    toggleShiftLock();
+                }
+
+                const activeChair = chairsData.find(c => c.id === gameState.activeChairId);
+                if (e.key === 'e' || e.key === 'E') {
+                    if (isDoctorNearChair(activeChair)) {
+                        startSingleTreatment();
+                    }
                 }
             });
-            window.addEventListener('mouseup', () => isMouseDown = false);
-            window.addEventListener('mousemove', (e) => {
-                if (!isMouseDown) return;
-                const deltaX = e.clientX - mouseX;
-                const deltaY = e.clientY - mouseY;
 
-                cameraAngleX -= deltaX * 0.005;
-                cameraAngleY = Math.max(0.2, Math.min(1.2, cameraAngleY + deltaY * 0.005));
-
-                mouseX = e.clientX;
-                mouseY = e.clientY;
-            });
-            window.addEventListener('wheel', (e) => {
-                cameraDistance = Math.max(8, Math.min(30, cameraDistance + e.deltaY * 0.01));
+            window.addEventListener('keyup', (e) => {
+                keysPressed[e.key.toLowerCase()] = false;
             });
         }
 
-        function startMove(dir) { doctorMoveKey[dir] = true; }
-        function stopMove() { doctorMoveKey.up = doctorMoveKey.down = doctorMoveKey.left = doctorMoveKey.right = false; }
+        function updateCameraPosition() {
+            // ドクターの現在位置を中心にしてカメラを追従させる
+            const targetX = doctorMesh ? doctorMesh.position.x : 0;
+            const targetZ = doctorMesh ? doctorMesh.position.z : 0;
 
-        // --- UI Rendering ---
-        function renderChairSelectors() {
-            const container = document.getElementById('chair-selector-container');
-            container.innerHTML = '';
-
-            chairsData.filter(c => c.installed).forEach((chair) => {
-                const isSelected = chair.id === activeChairIndex;
-                const btn = document.createElement('button');
-                btn.className = `btn-action px-3 py-2 rounded-xl text-xs font-extrabold shadow flex items-center justify-between w-28 ${
-                    isSelected ? 'bg-teal-600 text-white ring-2 ring-teal-400' : 'bg-white/90 text-slate-700 hover:bg-slate-100'
-                }`;
-                btn.onclick = () => selectChair(chair.id);
-                btn.innerHTML = `
-                    <span>${chair.label}</span>
-                    <i class="fa-solid ${isSelected ? 'fa-circle-dot text-white' : 'fa-circle text-slate-300'} text-[10px]"></i>
-                `;
-                container.appendChild(btn);
-            });
+            camera.position.x = targetX + Math.sin(cameraAngle) * cameraRadius;
+            camera.position.z = targetZ + Math.cos(cameraAngle) * cameraRadius;
+            camera.position.y = cameraHeight;
+            camera.lookAt(targetX, 0, targetZ);
         }
 
-        function selectChair(index) {
-            activeChairIndex = index;
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Check distance between Doctor and target chair
+        function isDoctorNearChair(chair) {
+            if (!doctorMesh || !chair) return false;
+            const dx = doctorMesh.position.x - chair.xPos;
+            const dz = doctorMesh.position.z - (-3);
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            return dist <= 3.5;
+        }
+
+        // --- Game Logic Actions ---
+        function selectChair(id) {
+            const chair = chairsData.find(c => c.id === id);
+            if (!chair || id > gameState.purchasedChairsCount) return;
+            
+            gameState.activeChairId = id;
+            if (chair) {
+                doctorTargetPos.x = chair.xPos;
+                doctorTargetPos.z = -0.5;
+            }
             renderChairSelectors();
             updateUI();
         }
 
-        function updateUI() {
-            document.getElementById('ui-money').textContent = `¥${money.toLocaleString()}`;
-            document.getElementById('ui-reputation').textContent = `${reputation.toFixed(1)} / 5.0`;
+        function buyNewChair() {
+            const cost = 50000;
+            if (gameState.money >= cost && gameState.purchasedChairsCount < chairsData.length) {
+                gameState.money -= cost;
+                gameState.purchasedChairsCount++;
+                
+                // 新しく解放されたチェアーを生成
+                const newChair = chairsData[gameState.purchasedChairsCount - 1];
+                if (newChair) {
+                    const randomPatient = humanPatients[Math.floor(Math.random() * humanPatients.length)];
+                    newChair.patient = { ...randomPatient };
+                    newChair.occupied = true;
+                    createDentalChair(newChair);
+                }
 
-            const activeChair = chairsData.find(c => c.id === activeChairIndex);
-            if (activeChair && activeChair.patient) {
-                const p = activeChair.patient;
-                document.getElementById('active-patient-name').textContent = p.name;
-                document.getElementById('active-patient-condition').textContent = p.condition;
-                document.getElementById('active-patient-avatar').innerHTML = `<i class="fa-solid ${p.icon}"></i>`;
-                document.getElementById('active-chair-label').textContent = activeChair.label;
-                document.getElementById('ui-patient-time').textContent = `約 ${p.duration} 秒`;
-                document.getElementById('ui-patient-reward').textContent = `+¥${p.reward.toLocaleString()}`;
+                saveGameState(true);
+                renderChairSelectors();
+                updateUI();
             }
         }
 
-        // --- Perform Single Timed Treatment (ワンタップ治療＆メーター進行) ---
-        function performSingleTreatment() {
+        function hireStaff(type) {
+            const cost = 40000;
+            if (gameState.money >= cost) {
+                gameState.money -= cost;
+                gameState.doctorStaffCount++;
+                updateStaffMeshes();
+                saveGameState(true);
+                updateUI();
+            }
+        }
+
+        function startSingleTreatment() {
             if (isTreating) return;
-            const activeChair = chairsData.find(c => c.id === activeChairIndex);
-            if (!activeChair || !activeChair.patient) return;
+            const activeChair = chairsData.find(c => c.id === gameState.activeChairId);
+            if (!activeChair || !activeChair.occupied) return;
 
             isTreating = true;
-
-            const btnAction = document.getElementById('btn-treat-action');
             const progressContainer = document.getElementById('treatment-progress-container');
             const progressBar = document.getElementById('treatment-progress-bar');
+            const progressText = document.getElementById('treatment-progress-text');
+            const btnTreat = document.getElementById('btn-treat-action');
 
-            btnAction.classList.add('hidden');
             progressContainer.classList.remove('hidden');
-            progressBar.style.width = '0%';
+            btnTreat.classList.add('hidden');
 
-            const durationMs = activeChair.patient.duration * 1000;
-            const startTime = Date.now();
-
+            let progress = 0;
             const interval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(100, (elapsed / durationMs) * 100);
-                progressBar.style.width = `${progress}%`;
+                progress += 10;
+                progressBar.style.width = progress + '%';
+                progressText.innerText = progress + '%';
 
                 if (progress >= 100) {
                     clearInterval(interval);
-
-                    // Treatment Complete
-                    money += activeChair.patient.reward;
-                    reputation = Math.min(5.0, reputation + 0.05);
-
-                    // Show Feedback Modal
-                    document.getElementById('modal-reward-text').textContent = `+¥${activeChair.patient.reward.toLocaleString()} を獲得`;
-                    document.getElementById('modal-patient-comment').textContent = `「${activeChair.patient.comment}」`;
-                    document.getElementById('modal-patient-stars').textContent = activeChair.patient.stars;
-                    openModal('feedback-modal');
-
-                    // Reset State & Auto-switch to next chair
                     isTreating = false;
                     progressContainer.classList.add('hidden');
 
-                    // Next Patient & Switch Chair
-                    nextPatient(activeChairIndex);
-                    const installedChairs = chairsData.filter(c => c.installed);
-                    const nextChair = installedChairs[(installedChairs.findIndex(c => c.id === activeChairIndex) + 1) % installedChairs.length];
-                    if (nextChair) selectChair(nextChair.id);
+                    // Treatment Completion
+                    const reward = activeChair.patient.reward;
+                    gameState.money += reward;
+                    gameState.reputation = Math.min(5.0, (parseFloat(gameState.reputation) + 0.1)).toFixed(1);
 
+                    openModal(
+                        `<i class="fa-solid fa-circle-check text-emerald-400 text-3xl"></i><br>治療完了！`,
+                        `<p class="font-bold text-white text-sm mb-1">${activeChair.patient.name}</p>` +
+                        `<p class="text-amber-300 font-bold mb-2">獲得報酬: +¥${reward.toLocaleString()}</p>` +
+                        `<p class="italic bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">"${activeChair.patient.feedback}"</p>`
+                    );
+
+                    // Patient exits to entrance door and a new patient arrives
+                    respawnPatient(activeChair);
+                    saveGameState(true);
+                    updateUI();
+                }
+            }, 150);
+        }
+
+        function respawnPatient(chair) {
+            const pMesh = patientMeshes[chair.id];
+            if (!pMesh) return;
+
+            // Animate exit to Entrance Door (-14, -9.8)
+            let step = 0;
+            const exitInterval = setInterval(() => {
+                step++;
+                pMesh.position.x += (-14 - pMesh.position.x) * 0.15;
+                pMesh.position.z += (-9.8 - pMesh.position.z) * 0.15;
+
+                if (step >= 20) {
+                    clearInterval(exitInterval);
+                    // Select new random human patient
+                    const randomPatient = humanPatients[Math.floor(Math.random() * humanPatients.length)];
+                    chair.patient = { ...randomPatient };
+                    createHumanPatient(chair);
                     updateUI();
                 }
             }, 50);
         }
 
-        function nextPatient(chairIdx) {
-            const nextIdx = Math.floor(Math.random() * patientTemplates.length);
-            chairsData[chairIdx].patient = { ...patientTemplates[nextIdx] };
+        // UI Refresh
+        function updateUI() {
+            document.getElementById('ui-money').innerText = `¥${gameState.money.toLocaleString()}`;
+            document.getElementById('ui-reputation').innerText = gameState.reputation;
+            document.getElementById('ui-doctor-staff-count').innerText = gameState.doctorStaffCount;
 
-            if (patientMeshes[chairIdx]) {
-                const colors = [0xf59e0b, 0xec4899, 0x8b5cf6, 0x06b6d4, 0x10b981];
-                const randColor = colors[Math.floor(Math.random() * colors.length)];
-                patientMeshes[chairIdx].children[0].material.color.setHex(randColor);
+            const activeChair = chairsData.find(c => c.id === gameState.activeChairId) || chairsData[0];
+            if (activeChair && activeChair.patient) {
+                document.getElementById('patient-icon').innerText = activeChair.patient.icon;
+                document.getElementById('patient-name').innerText = activeChair.patient.name;
+                document.getElementById('patient-symptom').innerText = activeChair.patient.symptom;
+                document.getElementById('chair-badge').innerText = `台 #${activeChair.id}`;
             }
-        }
 
-        // --- Proximity & Distance Check ---
-        function checkProximityAndTreatment() {
-            if (isTreating) return;
-            const activeChair = chairsData.find(c => c.id === activeChairIndex);
-            if (!activeChair) return;
+            const isNear = isDoctorNearChair(activeChair);
+            const distAlert = document.getElementById('distance-alert');
+            const btnTreat = document.getElementById('btn-treat-action');
 
-            const dist = Math.hypot(doctorPos.x - activeChair.xPos, doctorPos.z - (-2));
-            const warning = document.getElementById('proximity-warning');
-            const btnAction = document.getElementById('btn-treat-action');
+            if (!isTreating) {
+                if (isNear) {
+                    distAlert.classList.add('hidden');
+                    btnTreat.classList.remove('hidden');
+                } else {
+                    distAlert.classList.remove('hidden');
+                    btnTreat.classList.add('hidden');
+                }
+            }
 
-            if (dist < 3.5) {
-                warning.classList.add('hidden');
-                btnAction.classList.remove('hidden');
+            // Chair Buy Button logic
+            const buyBtn = document.getElementById('btn-buy-chair');
+            if (gameState.purchasedChairsCount >= chairsData.length) {
+                buyBtn.style.display = 'none';
             } else {
-                warning.classList.remove('hidden');
-                btnAction.classList.add('hidden');
+                buyBtn.style.display = 'flex';
             }
         }
 
-        // --- Modal Helpers ---
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function renderChairSelectors() {
+            const container = document.getElementById('chair-selector-list');
+            container.innerHTML = '';
 
-        function buyChair() {
-            const uninstalledIndex = chairsData.findIndex(c => !c.installed);
-            if (uninstalledIndex === -1) {
-                alert('これ以上診察ユニットを増設できません');
-                return;
-            }
-            if (money < 300000) {
-                alert('資金が足りません (¥300,000 必要)');
-                return;
-            }
+            // 現在購入されている数（purchasedChairsCount）のみ生成
+            for (let i = 0; i < gameState.purchasedChairsCount; i++) {
+                const chair = chairsData[i];
+                if (!chair) continue;
+                const isActive = chair.id === gameState.activeChairId;
 
-            money -= 300000;
-            chairsData[uninstalledIndex].installed = true;
-            chairsData[uninstalledIndex].patient = { ...patientTemplates[uninstalledIndex % patientTemplates.length] };
-
-            spawn3DChairUnit(uninstalledIndex, chairsData[uninstalledIndex].xPos);
-            renderChairSelectors();
-            updateUI();
-            closeModal('menu-modal');
-        }
-
-        function hireStaff() {
-            if (money < 200000) {
-                alert('資金が足りません (¥200,000 必要)');
-                return;
-            }
-
-            money -= 200000;
-            hiredStaffCount++;
-
-            // Spawn Treatment Staff Mesh (ミントグリーンユニフォームの衛生士)
-            const staffGroup = new THREE.Group();
-
-            const sBodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.1, 16);
-            const sBodyMat = new THREE.MeshStandardMaterial({ color: 0x10b981 });
-            const sBody = new THREE.Mesh(sBodyGeo, sBodyMat);
-            sBody.position.y = 0.55;
-            staffGroup.add(sBody);
-
-            const sHeadGeo = new THREE.SphereGeometry(0.3, 16, 16);
-            const sHeadMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
-            const sHead = new THREE.Mesh(sHeadGeo, sHeadMat);
-            sHead.position.y = 1.3;
-            staffGroup.add(sHead);
-
-            const capGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.12, 16);
-            const capMat = new THREE.MeshStandardMaterial({ color: 0xe0e7ff });
-            const cap = new THREE.Mesh(capGeo, capMat);
-            cap.position.y = 1.55;
-            staffGroup.add(cap);
-
-            staffGroup.position.set(-4 + hiredStaffCount * 2, 0, -4);
-            scene.add(staffGroup);
-            staffMeshes.push({ mesh: staffGroup, targetChair: 0, timer: Math.random() * 5 });
-
-            updateUI();
-            closeModal('menu-modal');
-        }
-
-        // Walk Animation Helper
-        function animateWalk(mesh, isMoving, speedScale = 1.0) {
-            if (isMoving) {
-                mesh.position.y = Math.abs(Math.sin(Date.now() * 0.01 * speedScale)) * 0.15;
-                mesh.rotation.z = Math.sin(Date.now() * 0.01 * speedScale) * 0.05;
-            } else {
-                mesh.position.y = 0;
-                mesh.rotation.z = 0;
+                const btn = document.createElement('button');
+                btn.className = `glass-panel text-xs font-bold p-2.5 rounded-2xl flex items-center justify-between gap-3 border transition btn-action ${
+                    isActive ? 'border-cyan-400 bg-cyan-500/20 text-cyan-300' : 'border-slate-700 hover:bg-slate-800 text-slate-300'
+                }`;
+                btn.onclick = () => selectChair(chair.id);
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chair text-sm"></i>
+                        <span>${chair.name}</span>
+                    </div>
+                    <span class="w-2 h-2 rounded-full ${chair.occupied ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}"></span>
+                `;
+                container.appendChild(btn);
             }
         }
 
-        // --- Main Animation & Render Loop ---
+        // --- Main Animation & Player Movement Loop ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Doctor Keyboard / Touch Movement
-            const speed = 0.12;
-            let isMoving = false;
-            if (doctorMoveKey.up) { doctorPos.z -= speed; doctorMesh.rotation.y = Math.PI; isMoving = true; }
-            if (doctorMoveKey.down) { doctorPos.z += speed; doctorMesh.rotation.y = 0; isMoving = true; }
-            if (doctorMoveKey.left) { doctorPos.x -= speed; doctorMesh.rotation.y = -Math.PI / 2; isMoving = true; }
-            if (doctorMoveKey.right) { doctorPos.x += speed; doctorMesh.rotation.y = Math.PI / 2; isMoving = true; }
+            // Player Movement Logic (WASD & Arrow Keys)
+            let speed = isShiftLocked ? 0.22 : 0.12;
+            let moveX = 0;
+            let moveZ = 0;
 
-            doctorPos.x = Math.max(-14, Math.min(14, doctorPos.x));
-            doctorPos.z = Math.max(-9, Math.min(8, doctorPos.z));
+            if (keysPressed['w'] || keysPressed['arrowup']) moveZ -= speed;
+            if (keysPressed['s'] || keysPressed['arrowdown']) moveZ += speed;
+            if (keysPressed['a'] || keysPressed['arrowleft']) moveX -= speed;
+            if (keysPressed['d'] || keysPressed['arrowright']) moveX += speed;
 
-            if (doctorMesh) {
-                doctorMesh.position.set(doctorPos.x, 0, doctorPos.z);
-                animateWalk(doctorMesh, isMoving, 1.5);
+            if (doctorMesh && (moveX !== 0 || moveZ !== 0)) {
+                // 移動可能範囲の制限（壁の中に入らないようにする）
+                doctorMesh.position.x = Math.max(-16, Math.min(16, doctorMesh.position.x + moveX));
+                doctorMesh.position.z = Math.max(-8, Math.min(8, doctorMesh.position.z + moveZ));
+                // 注意: 進行方向への体の回転・旋回は行わず一定方向を維持します
             }
 
-            // Camera Orbit & Follow
-            if (camera && doctorMesh) {
-                const camX = doctorPos.x + cameraDistance * Math.sin(cameraAngleX) * Math.cos(cameraAngleY);
-                const camY = cameraDistance * Math.sin(cameraAngleY);
-                const camZ = doctorPos.z + cameraDistance * Math.cos(cameraAngleX) * Math.cos(cameraAngleY);
+            // ドクターの位置にカメラを毎フレームスムーズに追従
+            updateCameraPosition();
 
-                camera.position.set(camX, camY, camZ);
-                camera.lookAt(doctorPos.x, 1, doctorPos.z);
-            }
+            // UIの距離インジケーター表示更新
+            updateUI();
 
-            // Reception Staff Animation & Status
-            if (receptionSign) {
-                receptionSign.material.color.setHex(isSomeoneAtReception ? 0xf59e0b : 0x0284c7);
-            }
-            if (receptionStaffMesh) {
-                if (isSomeoneAtReception) {
-                    receptionStaffMesh.rotation.x = Math.sin(Date.now() * 0.005) * 0.1;
-                } else {
-                    receptionStaffMesh.rotation.x = 0;
-                }
-            }
-
-            // Automated Treatment Staff Patrol (治療衛生士スタッフの巡回動作)
-            staffMeshes.forEach(staff => {
-                staff.timer += 0.02;
-                const installedChairs = chairsData.filter(c => c.installed);
-                if (installedChairs.length === 0) return;
-
-                const targetChairObj = installedChairs[staff.targetChair % installedChairs.length];
-                const targetX = targetChairObj ? targetChairObj.xPos : 0;
-                const targetZ = -2;
-
-                const dx = targetX - staff.mesh.position.x;
-                const dz = targetZ - staff.mesh.position.z;
-                const isStaffMoving = Math.hypot(dx, dz) > 0.3;
-
-                if (isStaffMoving) {
-                    staff.mesh.position.x += (dx / Math.hypot(dx, dz)) * 0.05;
-                    staff.mesh.position.z += (dz / Math.hypot(dx, dz)) * 0.05;
-                    staff.mesh.rotation.y = Math.atan2(dx, dz);
-                }
-                animateWalk(staff.mesh, isStaffMoving, 1.1);
-
-                if (staff.timer > 6) {
-                    staff.timer = 0;
-                    staff.targetChair = (staff.targetChair + 1) % installedChairs.length;
-                    money += 6000;
-                    reputation = Math.min(5.0, reputation + 0.05);
-                    updateUI();
-                }
-            });
-
-            // Distance Check
-            checkProximityAndTreatment();
-
-            // Render
-            if (renderer && scene && camera) {
-                renderer.render(scene, camera);
-            }
-        }
-
-        function onWindowResize() {
-            if (!camera || !renderer) return;
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.render(scene, camera);
         }
     </script>
 </body>
