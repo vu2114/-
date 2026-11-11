@@ -11,25 +11,33 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body, html {
+        * { box-sizing: border-box; }
+        html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow: hidden;
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             user-select: none;
             -webkit-user-select: none;
         }
         #canvas-container {
-            width: 100%;
-            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             display: block;
             touch-action: none;
+            z-index: 1;
+            background-color: #0f172a;
         }
         /* Glassmorphism Styling */
         .glass-panel {
-            background: rgba(15, 23, 42, 0.82);
+            background: rgba(15, 23, 42, 0.85);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -67,11 +75,29 @@
             </div>
         </div>
 
-        <div class="glass-panel px-3 py-2 rounded-2xl flex items-center gap-2 pointer-events-auto">
-            <button onclick="saveGameState(true)" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1 px-3 rounded-xl transition">
-                <i class="fa-solid fa-floppy-disk mr-1"></i>保存
-            </button>
-            <span id="save-indicator" class="text-[10px] text-emerald-400 font-bold hidden animate-pulse">保存完了</span>
+        <!-- Top Right: Server Code & Connection UI -->
+        <div class="flex items-center gap-2 pointer-events-auto">
+            <div class="glass-panel px-3 py-2 rounded-2xl flex flex-col items-end gap-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] text-slate-400 font-bold">サーバーコード:</span>
+                    <span id="server-code-display" onclick="copyServerCode()" class="text-xs font-mono font-bold text-cyan-300 bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 transition" title="クリックしてコピー">---</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <input type="text" id="server-code-input" placeholder="コードを入力" class="bg-slate-800/90 border border-slate-700 text-white text-[11px] px-2 py-1 rounded-xl w-28 focus:outline-none focus:border-cyan-400 font-mono">
+                    <button onclick="connectToServer()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-[11px] px-3 py-1 rounded-xl transition">
+                        サーバーへ接続
+                    </button>
+                </div>
+            </div>
+            <div class="glass-panel px-3.5 py-2 rounded-2xl flex items-center gap-2 bg-slate-900/95 border border-emerald-500/30">
+                <button onclick="saveGameState(true)" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1 px-3 rounded-xl transition flex items-center gap-1 shadow-md">
+                    <i class="fa-solid fa-floppy-disk"></i>手動保存
+                </button>
+                <div class="flex items-center gap-1 pl-1 border-l border-slate-700">
+                    <div id="autosave-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span id="save-indicator" class="text-[10px] text-emerald-400 font-extrabold tracking-wide">自動保存中 (常時ON)</span>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -81,8 +107,8 @@
         <span>[WASD / 矢印キー] 移動 | [Shift] Shift Lock (<span id="shift-lock-status" class="text-rose-400">OFF</span>)</span>
     </div>
 
-    <!-- Middle-Left: Chair Switcher Toolbar (Moved slightly down to avoid overlapping the guide) -->
-    <div class="fixed left-3 top-32 z-20 flex flex-col gap-2">
+    <!-- Middle-Left: Chair Switcher Toolbar -->
+    <div class="fixed left-3 top-32 z-20 flex flex-col gap-2 pointer-events-auto">
         <div class="text-[11px] font-bold text-slate-300 px-2 glass-panel py-1 rounded-lg text-center">
             <i class="fa-solid fa-chair mr-1 text-cyan-400"></i>診察台
         </div>
@@ -96,19 +122,19 @@
         </button>
     </div>
 
-    <!-- Bottom Left: Staff Hiring Toolbar (Solo Doctor + Default Receptionist mode) -->
-    <div class="fixed bottom-3 left-3 z-20 flex gap-2">
-        <button onclick="hireStaff('doctor')" class="glass-panel hover:bg-slate-800 text-emerald-300 text-xs font-bold p-3 rounded-2xl flex items-center gap-2 border border-emerald-500/30 transition btn-action">
+    <!-- Bottom Left: Staff Hiring Toolbar -->
+    <div class="fixed bottom-3 left-3 z-20 flex gap-2 pointer-events-auto">
+        <button id="btn-hire-doctor" onclick="hireStaff('doctor')" class="glass-panel hover:bg-slate-800 text-emerald-300 text-xs font-bold p-3 rounded-2xl flex items-center gap-2 border border-emerald-500/30 transition btn-action">
             <i class="fa-solid fa-user-doctor text-lg"></i>
             <div class="text-left">
-                <div>治療アシスタント雇用</div>
-                <div class="text-[10px] text-slate-400">¥40,000 (現在: <span id="ui-doctor-staff-count">0</span>名)</div>
+                <div id="ui-hire-btn-text">治療アシスタント雇用</div>
+                <div class="text-[10px] text-slate-400" id="ui-hire-subtext">¥40,000 (現在: <span id="ui-doctor-staff-count">0</span>名)</div>
             </div>
         </button>
     </div>
 
     <!-- Bottom Right: Compact Patient Treatment Panel -->
-    <div class="fixed bottom-3 right-3 z-20 w-72 glass-panel p-3.5 rounded-3xl shadow-2xl border border-slate-700/60">
+    <div class="fixed bottom-3 right-3 z-20 w-72 glass-panel p-3.5 rounded-3xl shadow-2xl border border-slate-700/60 pointer-events-auto">
         <div class="flex items-center justify-between pb-2 border-b border-slate-700/50 mb-2">
             <div class="flex items-center gap-2">
                 <span id="patient-icon" class="text-2xl">👤</span>
@@ -188,6 +214,28 @@
             document.getElementById('game-modal').classList.add('hidden');
         }
 
+        function copyServerCode() {
+            const code = document.getElementById('server-code-display').innerText;
+            if (code && code !== '---') {
+                const el = document.createElement('textarea');
+                el.value = code;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                openModal("コピー完了", "サーバーコードをクリップボードにコピーしました！");
+            }
+        }
+
+        function connectToServer() {
+            const inputCode = document.getElementById('server-code-input').value.trim();
+            if (!inputCode) {
+                openModal("エラー", "接続するサーバーコードを入力してください。");
+                return;
+            }
+            openModal("接続成功", `サーバー (${inputCode}) に接続しました！フレンドと同じクリニック空間を共有します。`);
+        }
+
         // --- Human Patient Templates & Data ---
         const humanPatients = [
             { name: "田中 さくら 様", type: "会社員 (30代)", icon: "👩", symptom: "虫歯治療・痛み相談", reward: 12000, feedback: "とても手際よく治療してくれて痛くなかったです！ありがとうございます。" },
@@ -202,34 +250,39 @@
         let gameState = {
             money: 100000,
             reputation: 4.5,
-            purchasedChairsCount: 1, // 最初に解放されているのは1台のみ
-            receptionStaffCount: 1,  // 最初から1名常駐
+            purchasedChairsCount: 1,
+            receptionStaffCount: 1,
             doctorStaffCount: 0,
             activeChairId: 1
         };
 
         function loadGameState() {
             try {
-                const saved = localStorage.getItem('dental_clinic_save_v2');
+                const saved = localStorage.getItem('dental_clinic_save_v3');
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     gameState = { ...gameState, ...parsed };
-                    // 受付スタッフは最低1人保障
-                    if (gameState.receptionStaffCount < 1) {
-                        gameState.receptionStaffCount = 1;
-                    }
+                    if (gameState.receptionStaffCount < 1) gameState.receptionStaffCount = 1;
                 }
             } catch(e) { console.error("Save load error", e); }
         }
 
         function saveGameState(showNotice = false) {
             try {
-                localStorage.setItem('dental_clinic_save_v2', JSON.stringify(gameState));
-                if (showNotice) {
-                    const indicator = document.getElementById('save-indicator');
-                    if (indicator) {
-                        indicator.classList.remove('hidden');
-                        setTimeout(() => indicator.classList.add('hidden'), 2000);
+                localStorage.setItem('dental_clinic_save_v3', JSON.stringify(gameState));
+                
+                const indicator = document.getElementById('save-indicator');
+                const dot = document.getElementById('autosave-dot');
+                if (indicator) {
+                    if (showNotice) {
+                        indicator.innerText = "手動セーブ完了！";
+                        indicator.className = "text-[10px] text-cyan-300 font-extrabold tracking-wide";
+                        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping";
+                        setTimeout(() => {
+                            indicator.innerText = "自動保存中 (常時ON)";
+                            indicator.className = "text-[10px] text-emerald-400 font-extrabold tracking-wide";
+                            if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse";
+                        }, 2500);
                     }
                 }
             } catch(e) {}
@@ -237,11 +290,11 @@
 
         // --- Chairs Setup ---
         const chairsData = [
-            { id: 1, name: "診察台 #1", xPos: -6, occupied: true, patient: { ...humanPatients[0] } },
-            { id: 2, name: "診察台 #2", xPos: -1, occupied: false, patient: null },
-            { id: 3, name: "診察台 #3", xPos: 4, occupied: false, patient: null },
-            { id: 4, name: "診察台 #4", xPos: 9, occupied: false, patient: null },
-            { id: 5, name: "診察台 #5", xPos: 14, occupied: false, patient: null }
+            { id: 1, name: "診察台 #1", xPos: -6, occupied: true, patient: { ...humanPatients[0] }, staffTreating: false },
+            { id: 2, name: "診察台 #2", xPos: -1, occupied: false, patient: null, staffTreating: false },
+            { id: 3, name: "診察台 #3", xPos: 4, occupied: false, patient: null, staffTreating: false },
+            { id: 4, name: "診察台 #4", xPos: 9, occupied: false, patient: null, staffTreating: false },
+            { id: 5, name: "診察台 #5", xPos: 14, occupied: false, patient: null, staffTreating: false }
         ];
 
         // --- Three.js Globals ---
@@ -250,6 +303,7 @@
         let doctorTargetPos = { x: 0, z: 2 };
         let patientMeshes = {};
         let staffMeshes = [];
+        let staffData = []; // Store staff movement & state info
         let receptionStaffMesh = null;
 
         // Camera Control Variables
@@ -260,10 +314,9 @@
         let cameraHeight = 11;
 
         // Player Movement Controls
-        const keysPressed = {};
-
-        // Treatment State
+        let keysPressed = {};
         let isTreating = false;
+        let staffTreatingStates = {};
 
         // Initialize Application on Window Load
         window.onload = function() {
@@ -273,7 +326,12 @@
             updateUI();
             setupControls();
 
-            // Auto Save Interval continuously every 1s
+            // Generate Random Room Code
+            const randomCode = 'DC-' + Math.floor(1000 + Math.random() * 9000);
+            const codeDisplay = document.getElementById('server-code-display');
+            if (codeDisplay) codeDisplay.innerText = randomCode;
+
+            // Auto Save Interval every 1s
             setInterval(() => saveGameState(false), 1000);
 
             // Animation Loop
@@ -283,6 +341,7 @@
         // --- 3D Scene Initialization ---
         function init3DScene() {
             const container = document.getElementById('canvas-container');
+            if (!container) return;
             
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0f172a);
@@ -319,13 +378,13 @@
             backWall.position.set(0, 3, -10);
             scene.add(backWall);
 
-            // Entrance Door (IN & OUT)
-            createDoor(-14, "出入口 (IN & OUT)", 0x10b981);
+            // Entrance Door
+            createDoor(-14, 0x10b981);
 
             // Reception Desk
             createReceptionDesk();
 
-            // Create Dental Chairs & Patients (初期購入数分のみ生成)
+            // Create Dental Chairs & Patients
             chairsData.forEach((chair, index) => {
                 if (index < gameState.purchasedChairsCount) {
                     if (!chair.patient && humanPatients[index]) {
@@ -338,14 +397,12 @@
 
             // Create Doctor Mesh
             createDoctor();
-
-            // Create Staff
             updateStaffMeshes();
 
             window.addEventListener('resize', onWindowResize);
         }
 
-        function createDoor(x, labelText, colorHex) {
+        function createDoor(x, colorHex) {
             const doorGeo = new THREE.BoxGeometry(2.5, 4.5, 0.2);
             const doorMat = new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.8 });
             const door = new THREE.Mesh(doorGeo, doorMat);
@@ -365,14 +422,12 @@
             const group = new THREE.Group();
             group.position.set(chair.xPos, 0, -3);
 
-            // Chair Base
             const baseGeo = new THREE.BoxGeometry(1.6, 0.5, 2.8);
             const baseMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8 });
             const base = new THREE.Mesh(baseGeo, baseMat);
             base.position.y = 0.25;
             group.add(base);
 
-            // Chair Backrest
             const backGeo = new THREE.BoxGeometry(1.5, 1.2, 0.3);
             const backMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
             const back = new THREE.Mesh(backGeo, backMat);
@@ -380,8 +435,6 @@
             group.add(back);
 
             scene.add(group);
-
-            // Create Human Patient Mesh lying on Chair
             createHumanPatient(chair);
         }
 
@@ -393,14 +446,12 @@
             const group = new THREE.Group();
             group.position.set(chair.xPos, 0.65, -3);
 
-            // Body (Lying down)
             const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x64748b });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.rotation.x = Math.PI / 2;
             group.add(body);
 
-            // Head
             const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xfde047 });
             const head = new THREE.Mesh(headGeo, headMat);
@@ -413,15 +464,12 @@
 
         function createDoctor() {
             const group = new THREE.Group();
-
-            // Body
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.5, 8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: 0x10b981 });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 0.75;
             group.add(body);
 
-            // Head
             const headGeo = new THREE.SphereGeometry(0.35, 16, 16);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xffedd5 });
             const head = new THREE.Mesh(headGeo, headMat);
@@ -434,52 +482,96 @@
         }
 
         function updateStaffMeshes() {
-            // Clear existing staff
             staffMeshes.forEach(s => scene.remove(s));
             staffMeshes = [];
+            staffData = [];
 
             if (receptionStaffMesh) {
                 scene.remove(receptionStaffMesh);
                 receptionStaffMesh = null;
             }
 
-            // Reception Staff (Initially 1 present at reception desk)
             if (gameState.receptionStaffCount > 0) {
                 const rGroup = new THREE.Group();
-                const rBody = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0xf43f5e }));
-                rBody.position.y = 0.7;
+                const rBody = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.4, 1.3, 12),
+                    new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.4 })
+                );
+                rBody.position.y = 0.65;
                 rGroup.add(rBody);
-                const rHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
-                rHead.position.y = 1.6;
+
+                const rHead = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.32, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffedd5, roughness: 0.5 })
+                );
+                rHead.position.y = 1.55;
                 rGroup.add(rHead);
 
-                rGroup.position.set(-9, 0, -4.5); // 受付カウンターの後ろ
+                rGroup.position.set(-9, 0, -4.5);
                 scene.add(rGroup);
                 receptionStaffMesh = rGroup;
             }
 
-            // Treatment Staff (Patrolling near chairs)
+            // Create Staff members with proper professional white coat models and assigned dedicated chairs
             for (let i = 0; i < gameState.doctorStaffCount; i++) {
                 const group = new THREE.Group();
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.4, 8), new THREE.MeshStandardMaterial({ color: 0x14b8a6 }));
+                
+                // Lab coat body
+                const body = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.45, 0.48, 1.4, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 })
+                );
                 body.position.y = 0.7;
                 group.add(body);
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
+
+                // Inner shirt & tie
+                const innerShirt = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.35, 1.2, 0.35),
+                    new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.4 })
+                );
+                innerShirt.position.set(0, 0.7, 0);
+                group.add(innerShirt);
+
+                // Head
+                const head = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.32, 16, 16),
+                    new THREE.MeshStandardMaterial({ color: 0xffedd5, roughness: 0.5 })
+                );
                 head.position.y = 1.6;
                 group.add(head);
 
-                group.position.set(-1 + (i * 4), 0, -1);
+                // Medical cap
+                const cap = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.42, 0.15, 0.42),
+                    new THREE.MeshStandardMaterial({ color: 0x06b6d4 })
+                );
+                cap.position.set(0, 1.85, 0);
+                group.add(cap);
+                
+                // Spread rest positions nicely in front of the chairs
+                const startX = -1 + (i * 3.5);
+                const startZ = 4;
+                group.position.set(startX, 0, startZ);
                 scene.add(group);
+                
                 staffMeshes.push(group);
+                staffData.push({
+                    id: i,
+                    assignedChairId: i + 1, // Staff 1 -> Chair #1, Staff 2 -> Chair #2, Staff 3 -> Chair #3
+                    mesh: group,
+                    homeX: startX,
+                    homeZ: startZ,
+                    state: 'IDLE',
+                    progress: 0
+                });
             }
         }
 
-        // --- Controls (Mouse & Touch Camera Rotation & Zoom) ---
         function setupControls() {
             const container = document.getElementById('canvas-container');
+            if (!container) return;
 
             container.addEventListener('pointerdown', (e) => {
-                // 右クリック(button 2)または左クリック対応
                 isDragging = true;
                 previousMousePosition = { x: e.clientX, y: e.clientY };
             });
@@ -487,7 +579,6 @@
             window.addEventListener('pointermove', (e) => {
                 if (!isDragging) return;
                 const deltaX = e.clientX - previousMousePosition.x;
-                // 右クリック等のドラッグ方向とカメラ旋回方向を直感的な方向に反転（+deltaX）
                 cameraAngle -= deltaX * 0.005;
                 updateCameraPosition();
                 previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -500,19 +591,13 @@
                 updateCameraPosition();
             });
 
-            // Keyboard Movement (WASD & Arrows) & E-Key Shortcut & Shift Lock Toggle
             window.addEventListener('keydown', (e) => {
                 keysPressed[e.key.toLowerCase()] = true;
-
-                if (e.key === 'Shift') {
-                    toggleShiftLock();
-                }
+                if (e.key === 'Shift') toggleShiftLock();
 
                 const activeChair = chairsData.find(c => c.id === gameState.activeChairId);
                 if (e.key === 'e' || e.key === 'E') {
-                    if (isDoctorNearChair(activeChair)) {
-                        startSingleTreatment();
-                    }
+                    if (isDoctorNearChair(activeChair)) startSingleTreatment();
                 }
             });
 
@@ -522,7 +607,7 @@
         }
 
         function updateCameraPosition() {
-            // ドクターの現在位置を中心にしてカメラを追従させる
+            if (!camera) return;
             const targetX = doctorMesh ? doctorMesh.position.x : 0;
             const targetZ = doctorMesh ? doctorMesh.position.z : 0;
 
@@ -533,21 +618,19 @@
         }
 
         function onWindowResize() {
+            if (!camera || !renderer) return;
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Check distance between Doctor and target chair
         function isDoctorNearChair(chair) {
             if (!doctorMesh || !chair) return false;
             const dx = doctorMesh.position.x - chair.xPos;
             const dz = doctorMesh.position.z - (-3);
-            const dist = Math.sqrt(dx * dx + dz * dz);
-            return dist <= 3.5;
+            return Math.sqrt(dx * dx + dz * dz) <= 3.5;
         }
 
-        // --- Game Logic Actions ---
         function selectChair(id) {
             const chair = chairsData.find(c => c.id === id);
             if (!chair || id > gameState.purchasedChairsCount) return;
@@ -567,7 +650,6 @@
                 gameState.money -= cost;
                 gameState.purchasedChairsCount++;
                 
-                // 新しく解放されたチェアーを生成
                 const newChair = chairsData[gameState.purchasedChairsCount - 1];
                 if (newChair) {
                     const randomPatient = humanPatients[Math.floor(Math.random() * humanPatients.length)];
@@ -584,6 +666,15 @@
 
         function hireStaff(type) {
             const cost = 40000;
+            if (gameState.doctorStaffCount >= 3) {
+                openModal("雇用上限", "治療アシスタントは最大3名まで雇用可能です。");
+                return;
+            }
+            // Check if user has purchased enough chairs to hire the next assistant
+            if (gameState.doctorStaffCount >= gameState.purchasedChairsCount) {
+                openModal("チェアー不足", `アシスタントをさらに雇用するには、まず新しくチェアーを増設してください。<br>(現在所有チェアー数: ${gameState.purchasedChairsCount}台 / アシスタント数: ${gameState.doctorStaffCount}名)`);
+                return;
+            }
             if (gameState.money >= cost) {
                 gameState.money -= cost;
                 gameState.doctorStaffCount++;
@@ -591,6 +682,89 @@
                 saveGameState(true);
                 updateUI();
             }
+        }
+
+        function processStaffAutoTreatments() {
+            if (gameState.doctorStaffCount <= 0) return;
+
+            staffData.forEach((staff, idx) => {
+                if (!staff || !staff.mesh) return;
+
+                // Each staff looks specifically at their assigned chair
+                const assignedChair = chairsData.find(c => c.id === staff.assignedChairId);
+
+                // Check if the assigned chair is purchased, exists, and is occupied by a patient
+                const isChairAvailable = assignedChair && assignedChair.id <= gameState.purchasedChairsCount && assignedChair.occupied;
+
+                if (staff.state === 'IDLE') {
+                    if (isChairAvailable && !assignedChair.staffTreating) {
+                        assignedChair.staffTreating = true;
+                        staff.state = 'WALKING_TO_CHAIR';
+                    }
+                } else if (staff.state === 'WALKING_TO_CHAIR') {
+                    if (!isChairAvailable) {
+                        if (assignedChair) assignedChair.staffTreating = false;
+                        staff.state = 'RETURNING';
+                        return;
+                    }
+                    const targetX = assignedChair.xPos;
+                    const targetZ = -1.2;
+
+                    const dx = targetX - staff.mesh.position.x;
+                    const dz = targetZ - staff.mesh.position.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    staff.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.02 + idx)) * 0.15;
+
+                    if (dist < 0.8) {
+                        staff.mesh.position.y = 0;
+                        staff.state = 'TREATING';
+                        staff.progress = 0;
+                    } else {
+                        staff.mesh.position.x += (dx / dist) * 0.15;
+                        staff.mesh.position.z += (dz / dist) * 0.15;
+                    }
+                } else if (staff.state === 'TREATING') {
+                    if (!isChairAvailable) {
+                        if (assignedChair) assignedChair.staffTreating = false;
+                        staff.state = 'RETURNING';
+                        return;
+                    }
+                    staff.progress += 2.5;
+                    staff.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.03 + idx)) * 0.25;
+
+                    if (staff.progress >= 100) {
+                        staff.mesh.position.y = 0;
+                        if (assignedChair && assignedChair.occupied && assignedChair.patient) {
+                            const reward = assignedChair.patient.reward;
+                            gameState.money += reward;
+                            gameState.reputation = Math.min(5.0, (parseFloat(gameState.reputation) + 0.05)).toFixed(1);
+
+                            assignedChair.staffTreating = false;
+                            respawnPatient(assignedChair);
+                            saveGameState(false);
+                            updateUI();
+                        }
+                        staff.state = 'RETURNING';
+                    }
+                } else if (staff.state === 'RETURNING') {
+                    const dx = staff.homeX - staff.mesh.position.x;
+                    const dz = staff.homeZ - staff.mesh.position.z;
+                    const dist = Math.sqrt(dx * dx + dz * dz);
+
+                    staff.mesh.position.y = Math.abs(Math.sin(Date.now() * 0.02 + idx)) * 0.15;
+
+                    if (dist < 0.8) {
+                        staff.mesh.position.x = staff.homeX;
+                        staff.mesh.position.z = staff.homeZ;
+                        staff.mesh.position.y = 0;
+                        staff.state = 'IDLE';
+                    } else {
+                        staff.mesh.position.x += (dx / dist) * 0.15;
+                        staff.mesh.position.z += (dz / dist) * 0.15;
+                    }
+                }
+            });
         }
 
         function startSingleTreatment() {
@@ -618,7 +792,6 @@
                     isTreating = false;
                     progressContainer.classList.add('hidden');
 
-                    // Treatment Completion
                     const reward = activeChair.patient.reward;
                     gameState.money += reward;
                     gameState.reputation = Math.min(5.0, (parseFloat(gameState.reputation) + 0.1)).toFixed(1);
@@ -630,19 +803,17 @@
                         `<p class="italic bg-slate-800/80 p-2.5 rounded-xl border border-slate-700">"${activeChair.patient.feedback}"</p>`
                     );
 
-                    // Patient exits to entrance door and a new patient arrives
                     respawnPatient(activeChair);
                     saveGameState(true);
                     updateUI();
                 }
-            }, 150);
+            }, 180);
         }
 
         function respawnPatient(chair) {
             const pMesh = patientMeshes[chair.id];
             if (!pMesh) return;
 
-            // Animate exit to Entrance Door (-14, -9.8)
             let step = 0;
             const exitInterval = setInterval(() => {
                 step++;
@@ -651,7 +822,6 @@
 
                 if (step >= 20) {
                     clearInterval(exitInterval);
-                    // Select new random human patient
                     const randomPatient = humanPatients[Math.floor(Math.random() * humanPatients.length)];
                     chair.patient = { ...randomPatient };
                     createHumanPatient(chair);
@@ -660,18 +830,41 @@
             }, 50);
         }
 
-        // UI Refresh
         function updateUI() {
-            document.getElementById('ui-money').innerText = `¥${gameState.money.toLocaleString()}`;
-            document.getElementById('ui-reputation').innerText = gameState.reputation;
-            document.getElementById('ui-doctor-staff-count').innerText = gameState.doctorStaffCount;
+            const moneyEl = document.getElementById('ui-money');
+            if (moneyEl) moneyEl.innerText = `¥${gameState.money.toLocaleString()}`;
+
+            const repEl = document.getElementById('ui-reputation');
+            if (repEl) repEl.innerText = gameState.reputation;
+
+            const docStaffEl = document.getElementById('ui-doctor-staff-count');
+            if (docStaffEl) docStaffEl.innerText = gameState.doctorStaffCount;
+
+            const hireBtn = document.getElementById('btn-hire-doctor');
+            const hireBtnText = document.getElementById('ui-hire-btn-text');
+            const hireSubtext = document.getElementById('ui-hire-subtext');
+            if (gameState.doctorStaffCount >= 3) {
+                if (hireBtnText) hireBtnText.innerText = "治療アシスタント (MAX)";
+                if (hireSubtext) hireSubtext.innerHTML = "雇用上限到達 (3/3名)";
+                if (hireBtn) hireBtn.classList.add('opacity-75', 'border-emerald-500/50');
+            } else {
+                if (hireBtnText) hireBtnText.innerText = "治療アシスタント雇用";
+                if (hireSubtext) hireSubtext.innerHTML = `¥40,000 (現在: <span id="ui-doctor-staff-count">${gameState.doctorStaffCount}</span>名)`;
+            }
 
             const activeChair = chairsData.find(c => c.id === gameState.activeChairId) || chairsData[0];
             if (activeChair && activeChair.patient) {
-                document.getElementById('patient-icon').innerText = activeChair.patient.icon;
-                document.getElementById('patient-name').innerText = activeChair.patient.name;
-                document.getElementById('patient-symptom').innerText = activeChair.patient.symptom;
-                document.getElementById('chair-badge').innerText = `台 #${activeChair.id}`;
+                const pIcon = document.getElementById('patient-icon');
+                if (pIcon) pIcon.innerText = activeChair.patient.icon;
+
+                const pName = document.getElementById('patient-name');
+                if (pName) pName.innerText = activeChair.patient.name;
+
+                const pSym = document.getElementById('patient-symptom');
+                if (pSym) pSym.innerText = activeChair.patient.symptom;
+
+                const cBadge = document.getElementById('chair-badge');
+                if (cBadge) cBadge.innerText = `台 #${activeChair.id}`;
             }
 
             const isNear = isDoctorNearChair(activeChair);
@@ -680,28 +873,29 @@
 
             if (!isTreating) {
                 if (isNear) {
-                    distAlert.classList.add('hidden');
-                    btnTreat.classList.remove('hidden');
+                    if (distAlert) distAlert.classList.add('hidden');
+                    if (btnTreat) btnTreat.classList.remove('hidden');
                 } else {
-                    distAlert.classList.remove('hidden');
-                    btnTreat.classList.add('hidden');
+                    if (distAlert) distAlert.classList.remove('hidden');
+                    if (btnTreat) btnTreat.classList.add('hidden');
                 }
             }
 
-            // Chair Buy Button logic
             const buyBtn = document.getElementById('btn-buy-chair');
-            if (gameState.purchasedChairsCount >= chairsData.length) {
-                buyBtn.style.display = 'none';
-            } else {
-                buyBtn.style.display = 'flex';
+            if (buyBtn) {
+                if (gameState.purchasedChairsCount >= chairsData.length) {
+                    buyBtn.style.display = 'none';
+                } else {
+                    buyBtn.style.display = 'flex';
+                }
             }
         }
 
         function renderChairSelectors() {
             const container = document.getElementById('chair-selector-list');
+            if (!container) return;
             container.innerHTML = '';
 
-            // 現在購入されている数（purchasedChairsCount）のみ生成
             for (let i = 0; i < gameState.purchasedChairsCount; i++) {
                 const chair = chairsData[i];
                 if (!chair) continue;
@@ -723,11 +917,11 @@
             }
         }
 
-        // --- Main Animation & Player Movement Loop ---
         function animate() {
             requestAnimationFrame(animate);
 
-            // Player Movement Logic (WASD & Arrow Keys)
+            processStaffAutoTreatments();
+
             let speed = isShiftLocked ? 0.22 : 0.12;
             let moveX = 0;
             let moveZ = 0;
@@ -738,19 +932,16 @@
             if (keysPressed['d'] || keysPressed['arrowright']) moveX += speed;
 
             if (doctorMesh && (moveX !== 0 || moveZ !== 0)) {
-                // 移動可能範囲の制限（壁の中に入らないようにする）
                 doctorMesh.position.x = Math.max(-16, Math.min(16, doctorMesh.position.x + moveX));
                 doctorMesh.position.z = Math.max(-8, Math.min(8, doctorMesh.position.z + moveZ));
-                // 注意: 進行方向への体の回転・旋回は行わず一定方向を維持します
             }
 
-            // ドクターの位置にカメラを毎フレームスムーズに追従
             updateCameraPosition();
-
-            // UIの距離インジケーター表示更新
             updateUI();
 
-            renderer.render(scene, camera);
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
         }
     </script>
 </body>
